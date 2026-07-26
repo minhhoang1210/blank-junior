@@ -1,0 +1,34 @@
+{
+  "name": "blank-junior",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Blank Junior — a Discord bot that summarises channels (/tldr) and answers questions (/ask) using the Gemini API",
+  "type": "module",
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.check.json",
+    "deploy": "tsx src/deploy-commands.ts",
+    "deploy:prod": "node dist/deploy-commands.js",
+    "smoke": "tsx scripts/smoke.ts && tsx scripts/smoke-http.ts",
+    "models": "tsx scripts/models.ts",
+    "probe": "tsx scripts/probe.ts",
+    "smoke:http": "tsx scripts/smoke-http.ts"
+  },
+  "dependencies": {
+    "@google/genai": "^2.13.0",
+    "@vercel/functions": "^3.7.6",
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.11",
+    "@vercel/node": "^5.8.27",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3"
+  }
+}

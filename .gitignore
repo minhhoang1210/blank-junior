@@ -1,0 +1,10 @@
+node_modules/
+dist/
+output/
+.env
+.env.local
+*.log
+*.epub
+.DS_Store
+
+.vercel

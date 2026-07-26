@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "echo \"No static build - API functions only.\"",
+  "outputDirectory": "public",
+  "functions": {
+    "api/interactions.ts": {
+      "maxDuration": 60
+    }
+  }
+}

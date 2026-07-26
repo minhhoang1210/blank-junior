@@ -1,0 +1,5 @@
+{
+  "permissions": {
+    "allow": ["PowerShell(node --version)", "PowerShell(npm --version)"]
+  }
+}

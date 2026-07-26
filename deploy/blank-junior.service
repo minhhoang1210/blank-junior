@@ -1,0 +1,49 @@
+# systemd unit for running Blank Junior 24/7 on a Linux VPS.
+#
+#   sudo cp deploy/blank-junior.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now blank-junior
+#   journalctl -u blank-junior -f      # follow logs
+#
+# Adjust User and WorkingDirectory to match where you cloned the repo.
+
+[Unit]
+Description=Blank Junior Discord Bot
+# network-online (not just network) so the first gateway connection isn't
+# attempted before DNS is usable on boot.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=blankjunior
+WorkingDirectory=/opt/blank-junior
+
+# The app loads .env itself via dotenv, relative to WorkingDirectory, so no
+# EnvironmentFile is needed. If you would rather systemd supply the variables,
+# use `EnvironmentFile=/opt/blank-junior/.env` instead — but note systemd
+# parses that file more strictly than dotenv does (no quotes, no spaces around
+# `=`, no inline comments).
+ExecStart=/usr/bin/node dist/index.js
+
+# Discord.js reconnects on its own, but restart anyway if the process dies.
+Restart=always
+RestartSec=5
+
+# Don't let a crash-loop hammer Discord's API: give up after 5 starts in 60s.
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=blank-junior
+
+# Modest hardening — the bot needs no privileges and writes nothing.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=
+
+[Install]
+WantedBy=multi-user.target
