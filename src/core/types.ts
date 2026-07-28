@@ -10,13 +10,20 @@ export interface Embed {
   color?: number;
   author?: { name: string };
   footer?: { text: string };
-  fields?: { name: string; value: string }[];
+  fields?: { name: string; value: string; inline?: boolean }[];
+}
+
+/** A file sent alongside a reply — currently only the EPUB /epub produces. */
+export interface Attachment {
+  filename: string;
+  data: Uint8Array;
 }
 
 /** What a command produced, before it is sent anywhere. */
 export interface BotReply {
   text: string;
   embeds: Embed[];
+  file?: Attachment;
 }
 
 /**
@@ -26,7 +33,7 @@ export interface BotReply {
  * webhook. Commands don't care which, so they take one of these instead.
  */
 export interface ReplyTransport {
-  edit(content: string, embeds: Embed[]): Promise<void>;
+  edit(content: string, embeds: Embed[], file?: Attachment): Promise<void>;
   followUp(content: string): Promise<void>;
 }
 

@@ -1,7 +1,7 @@
 import { config } from "../config.js";
 import { strings } from "../core/strings.js";
 import { logger } from "../util/logger.js";
-import { runAsk, runTldr } from "./commands.js";
+import { runAsk, runEpub, runTldr } from "./commands.js";
 import { verifyDiscordRequest } from "./verify.js";
 
 /** Discord interaction types we handle. */
@@ -119,6 +119,13 @@ function routeCommand(interaction: Interaction): InteractionResult {
     if (!question) return reply(strings.ask.blankQuestion);
 
     return { ...deferred, background: () => runAsk(token, question) };
+  }
+
+  if (name === "epub") {
+    const url = String(optionValue(interaction, "url") ?? "").trim();
+    if (!url) return reply(strings.epub.invalidUrl);
+
+    return { ...deferred, background: () => runEpub(token, url) };
   }
 
   logger.warn(`Received unknown command /${name ?? "(none)"}`);

@@ -1,11 +1,17 @@
 import { answerQuestion, type Answer } from "../gemini/ask.js";
 import { logger } from "../util/logger.js";
 import { truncate } from "../util/text.js";
+import type { CommandJob } from "./run.js";
 import { strings } from "./strings.js";
 import { BRAND_COLOUR, type BotReply, type Embed } from "./types.js";
 
 /** How many grounding sources to list under an answer. */
 const MAX_SOURCES = 5;
+
+/** `/ask` as a runnable job. Both transports invoke it through this. */
+export function askJob(question: string, actor?: string): CommandJob {
+  return { name: "ask", ...(actor ? { actor } : {}), build: () => answerCommand(question) };
+}
 
 /** Answers the question and formats it — everything except sending. */
 export async function answerCommand(question: string): Promise<BotReply> {

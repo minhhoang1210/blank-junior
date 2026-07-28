@@ -42,3 +42,10 @@ function lastIndexBefore(window: string, separator: string): number | undefined 
 export function truncate(value: string, max: number): string {
   return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
 }
+
+/** Renders a byte count for an embed field. */
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}

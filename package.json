@@ -15,6 +15,7 @@
     "deploy": "tsx src/deploy-commands.ts",
     "deploy:prod": "node dist/deploy-commands.js",
     "smoke": "tsx scripts/smoke.ts && tsx scripts/smoke-http.ts",
+    "epub": "tsx scripts/epub.ts",
     "models": "tsx scripts/models.ts",
     "probe": "tsx scripts/probe.ts",
     "smoke:http": "tsx scripts/smoke-http.ts"
@@ -23,7 +24,9 @@
     "@google/genai": "^2.13.0",
     "@vercel/functions": "^3.7.6",
     "discord.js": "^14.16.3",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "jszip": "^3.10.1",
+    "linkedom": "^0.18.13"
   },
   "devDependencies": {
     "@types/node": "^20.16.11",

@@ -34,17 +34,23 @@ export interface RawMessage {
 async function request<T>(
   method: "GET" | "POST" | "PATCH",
   path: string,
-  options: { body?: unknown; auth?: string } = {},
+  options: { body?: unknown; form?: FormData; auth?: string } = {},
 ): Promise<T> {
   for (let attempt = 0; attempt < 2; attempt++) {
     const response = await fetch(`${API}${path}`, {
       method,
       headers: {
         ...(options.auth === undefined ? { Authorization: `Bot ${config.discordToken}` } : {}),
-        "Content-Type": "application/json",
+        // fetch writes the multipart content-type itself, boundary included;
+        // setting one here would send a body Discord cannot parse.
+        ...(options.form === undefined ? { "Content-Type": "application/json" } : {}),
         "User-Agent": "DiscordBot (blank-junior, 1.0.0)",
       },
-      ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
+      ...(options.form !== undefined
+        ? { body: options.form }
+        : options.body === undefined
+          ? {}
+          : { body: JSON.stringify(options.body) }),
     });
 
     if (response.status === 429 && attempt === 0) {
@@ -98,11 +104,25 @@ export function fetchChannelMessages(
 export function editOriginalResponse(
   interactionToken: string,
   body: { content?: string; embeds?: unknown[] },
+  file?: { filename: string; data: Uint8Array },
 ): Promise<unknown> {
-  return request("PATCH", `/webhooks/${config.clientId}/${interactionToken}/messages/@original`, {
-    body,
-    auth: "none",
-  });
+  const path = `/webhooks/${config.clientId}/${interactionToken}/messages/@original`;
+  if (!file) return request("PATCH", path, { body, auth: "none" });
+
+  // Attachments go up as multipart: the JSON payload names the file by index,
+  // and `files[0]` carries the bytes it refers to.
+  const form = new FormData();
+  form.append(
+    "payload_json",
+    JSON.stringify({ ...body, attachments: [{ id: 0, filename: file.filename }] }),
+  );
+  form.append(
+    "files[0]",
+    new Blob([file.data], { type: "application/epub+zip" }),
+    file.filename,
+  );
+
+  return request("PATCH", path, { form, auth: "none" });
 }
 
 /** Sends an additional message on the same interaction, for long replies. */

@@ -1,4 +1,5 @@
 import { HistoryError } from "../discord/history-error.js";
+import { EpubError } from "../epub/errors.js";
 import { describeGeminiError } from "../gemini/client.js";
 import { logger } from "../util/logger.js";
 import { chunkForDiscord } from "../util/text.js";
@@ -12,7 +13,7 @@ import type { BotReply, ReplyTransport } from "./types.js";
 export async function deliver(transport: ReplyTransport, reply: BotReply): Promise<void> {
   const chunks = chunkForDiscord(reply.text);
 
-  await transport.edit(chunks[0] ?? strings.emptyResponse, reply.embeds);
+  await transport.edit(chunks[0] ?? strings.emptyResponse, reply.embeds, reply.file);
 
   for (const chunk of chunks.slice(1)) {
     await transport.followUp(chunk);
@@ -33,7 +34,8 @@ export async function deliverError(transport: ReplyTransport, error: unknown): P
 
 /** Turns any thrown value into something worth showing a user. */
 export function toUserMessage(error: unknown): string {
-  return error instanceof HistoryError ? error.message : describeGeminiError(error);
+  if (error instanceof HistoryError || error instanceof EpubError) return error.message;
+  return describeGeminiError(error);
 }
 
 /** Compact rendering of a thrown value, for logs. */

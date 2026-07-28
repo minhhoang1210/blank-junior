@@ -2,6 +2,7 @@ import { MAX_TLDR_MESSAGES, MIN_TLDR_MESSAGES } from "../config.js";
 import { buildTranscript, type CapturedMessage } from "../discord/transcript.js";
 import { summariseConversation } from "../gemini/summarize.js";
 import { logger } from "../util/logger.js";
+import type { CommandJob } from "./run.js";
 import { strings } from "./strings.js";
 import { BRAND_COLOUR, type BotReply } from "./types.js";
 
@@ -12,6 +13,27 @@ import { BRAND_COLOUR, type BotReply } from "./types.js";
  * path over raw REST, so the command takes a fetcher rather than either.
  */
 export type MessageFetcher = (limit: number) => Promise<CapturedMessage[]>;
+
+export interface TldrInput {
+  fetchMessages: MessageFetcher;
+  requested: number;
+  /** Resolved differently per transport, so the caller supplies it. */
+  channelName?: string | (() => Promise<string | undefined>);
+}
+
+/** `/tldr` as a runnable job. Both transports invoke it through this. */
+export function tldrJob(input: TldrInput, actor?: string): CommandJob {
+  return {
+    name: "tldr",
+    ...(actor ? { actor } : {}),
+    build: async () =>
+      summariseChannel(
+        input.fetchMessages,
+        input.requested,
+        typeof input.channelName === "function" ? await input.channelName() : input.channelName,
+      ),
+  };
+}
 
 export function clampMessageCount(requested: number): number {
   if (!Number.isFinite(requested)) return MIN_TLDR_MESSAGES;
