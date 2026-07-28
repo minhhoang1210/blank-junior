@@ -144,7 +144,6 @@ function singlePageStory(
       {
         url: finalUrl,
         linkText: parsed.title,
-        order: null,
         title: parsed.title,
         html: parsed.html,
         wordCount: countWords(parsed.html),

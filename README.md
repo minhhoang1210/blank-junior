@@ -68,11 +68,17 @@ as an EPUB attachment. No Gemini involved — this command costs no quota.
 
 A link counts as a chapter when its URL or anchor text contains `chương`,
 `chap`, `chapter`, `phiên ngoại`, `ngoại truyện` or `vị thành`, compared with
-diacritics stripped so `Chương 12` and `chuong-12` are the same thing. Chapters
-are ordered by the number in the link when every one of them has a number, and
-by page order otherwise. Links to other hosts are ignored. A page with no
-chapter links at all is not an error: it becomes a one-chapter book, which is
-what a one-shot posted as a single WordPress post should be.
+diacritics stripped so `Chương 12` and `chuong-12` are the same thing. Links to
+other hosts are ignored. A page with no chapter links at all is not an error: it
+becomes a one-chapter book, which is what a one-shot posted as a single
+WordPress post should be.
+
+**Chapters keep the order the links appear in on the page**, top to bottom. The
+book is not re-sorted by the number in the link, because side stories restart
+their own numbering: on a real index of 41 chapters plus 5 extras, sorting
+numerically pairs `PN 1` with `Chương 01`, `PN 2` with `Chương 02`, and threads
+the extras through the middle of the story. The page already lists chapters in
+reading order.
 
 Each chapter page is reduced to its `<article>` and stripped of the usual
 WordPress furniture — sharing widgets, related posts, comments, navigation,

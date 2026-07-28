@@ -197,25 +197,6 @@ export function resolveUrl(href: string | null | undefined, baseUrl: string): st
   }
 }
 
-/** Pulls the first standalone number out of a URL slug or anchor text, for ordering. */
-export function parseChapterNumber(url: string, text: string): number | null {
-  const normalized = normalize(safeDecode(url));
-  const patterns = [
-    /(?:chuong|chapter|chap|phien-ngoai|ngoai-truyen|vi-thanh)[-_\s]*(\d+(?:\.\d+)?)/,
-    /\/(\d+(?:\.\d+)?)\/?$/,
-  ];
-
-  for (const pattern of patterns) {
-    const match = normalized.match(pattern)?.[1];
-    if (match) return Number.parseFloat(match);
-  }
-
-  const fromText = normalize(text).match(
-    /(?:chuong|chapter|chap|phien ngoai|ngoai truyen|vi thanh)\s*(\d+(?:\.\d+)?)/,
-  )?.[1];
-  return fromText ? Number.parseFloat(fromText) : null;
-}
-
 export function isChapterLink(url: string, text: string): boolean {
   const haystack = `${normalize(safeDecode(url))} ${normalize(text)}`;
   return KEYWORD_VARIANTS.some((keyword) => haystack.includes(keyword));
@@ -231,8 +212,14 @@ function safeDecode(value: string): string {
 }
 
 /**
- * Collects chapter links from the index page's article, in document order,
- * deduplicated by URL and restricted to the index page's own host.
+ * Collects chapter links from the index page's article, deduplicated by URL and
+ * restricted to the index page's own host.
+ *
+ * Document order *is* the reading order, and it is not second-guessed. Sorting
+ * by the number in the link looks tempting and is wrong: side stories restart
+ * their own numbering, so "Phiên ngoại 1" sorts against "Chương 1" and the
+ * extras end up shuffled through the main story instead of sitting after it.
+ * The page already lists chapters in the order they should be read.
  */
 export function extractChapterLinks(article: DomElement, baseUrl: string): Chapter[] {
   const origin = safeOrigin(baseUrl);
@@ -250,11 +237,7 @@ export function extractChapterLinks(article: DomElement, baseUrl: string): Chapt
     if (stripTrailingSlash(url) === stripTrailingSlash(baseUrl)) continue;
 
     seen.add(url);
-    chapters.push({
-      url,
-      linkText: linkText || url,
-      order: parseChapterNumber(url, linkText),
-    });
+    chapters.push({ url, linkText: linkText || url });
   }
 
   return chapters;
@@ -272,12 +255,6 @@ function stripTrailingSlash(url: string): string {
   return url.replace(/\/+$/, "");
 }
 
-/** Sorts by parsed chapter number when every entry has one; otherwise keeps page order. */
-export function sortChapters(chapters: Chapter[]): Chapter[] {
-  if (chapters.some((chapter) => chapter.order === null)) return chapters;
-  return [...chapters].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-}
-
 export function countWords(html: string): number {
   return (parseFragment(html).textContent ?? "").trim().match(/\S+/g)?.length ?? 0;
 }
@@ -292,7 +269,7 @@ export function parseIndexPage(
   const article = findArticle(doc);
   if (!article) throw new Error("Không tìm thấy phần nội dung trên trang mục lục.");
 
-  const chapters = sortChapters(extractChapterLinks(article, finalUrl));
+  const chapters = extractChapterLinks(article, finalUrl);
 
   // The synopsis is the article with the chapter links removed, so the exported
   // description page isn't just a wall of dead links.

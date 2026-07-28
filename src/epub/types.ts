@@ -3,8 +3,6 @@ export interface Chapter {
   url: string;
   /** Anchor text from the index page — the fallback title. */
   linkText: string;
-  /** Leading number parsed out of the URL or anchor text, used for sorting. */
-  order: number | null;
   /** Title taken from the chapter page itself once fetched. */
   title?: string;
   /** Cleaned inner HTML of the chapter page's content container. */
