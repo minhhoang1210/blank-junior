@@ -1,53 +1,32 @@
-import { DISCORD_FETCH_BATCH } from "../config.js";
-import { strings } from "../core/strings.js";
-import { HistoryError } from "./history-error.js";
+import { collectRecentMessages } from "./history-paginate.js";
 import { fetchChannelMessages, type RawMessage } from "./rest.js";
 import { clipContent, type CapturedMessage } from "./transcript.js";
 
 /**
  * Fetches the most recent `limit` messages over REST, oldest first.
  *
- * Same contract as the gateway fetcher, but usable from a serverless function
- * where no gateway client exists.
+ * Same contract as the gateway fetcher — and the same paging loop, from
+ * `history-paginate.ts` — but usable from a serverless function where no
+ * gateway client exists.
  */
-export async function fetchRecentMessagesRest(
+export function fetchRecentMessagesRest(
   channelId: string,
   limit: number,
   excludeAuthorId: string,
 ): Promise<CapturedMessage[]> {
-  const collected: CapturedMessage[] = [];
-  let before: string | undefined;
-  let remaining = limit;
-
-  while (remaining > 0) {
-    const batchSize = Math.min(DISCORD_FETCH_BATCH, remaining);
-
-    let batch: RawMessage[];
-    try {
-      batch = await fetchChannelMessages(channelId, {
-        limit: batchSize,
-        ...(before ? { before } : {}),
-      });
-    } catch {
-      throw new HistoryError(strings.missingHistoryPermission);
-    }
-
-    if (batch.length === 0) break;
-
-    // Discord returns newest first within a batch.
-    for (const message of batch) {
-      before = message.id;
-      if (message.author.id === excludeAuthorId) continue;
-      const captured = capture(message);
-      if (captured) collected.push(captured);
-    }
-
-    remaining -= batch.length;
-    if (batch.length < batchSize) break;
-  }
-
-  // Collected newest-first across batches; the transcript reads chronologically.
-  return collected.reverse();
+  return collectRecentMessages(
+    {
+      fetchBatch: (batchSize, before) =>
+        fetchChannelMessages(channelId, {
+          limit: batchSize,
+          ...(before ? { before } : {}),
+        }),
+      identify: (message) => ({ id: message.id, authorId: message.author.id }),
+      capture,
+    },
+    limit,
+    excludeAuthorId,
+  );
 }
 
 /** Maps a REST payload to the shared shape, resolving user mentions by hand. */

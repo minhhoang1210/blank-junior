@@ -1,7 +1,6 @@
-import type { Collection, Message, TextBasedChannel } from "discord.js";
-import { DISCORD_FETCH_BATCH } from "../config.js";
-import { strings } from "../core/strings.js";
+import type { Message, TextBasedChannel } from "discord.js";
 import { HistoryError } from "./history-error.js";
+import { collectRecentMessages } from "./history-paginate.js";
 import { clipContent, type CapturedMessage } from "./transcript.js";
 
 export { HistoryError };
@@ -11,47 +10,30 @@ export { buildTranscript, type CapturedMessage } from "./transcript.js";
  * Fetches the most recent `limit` messages via a gateway client, oldest first.
  *
  * Used by the long-running bot (`src/index.ts`). The serverless entrypoint uses
- * `history-rest.ts` instead, which has the same contract over plain REST.
- *
- * Discord caps a fetch at 100, so anything larger is paginated with the
- * `before` cursor. Messages from `excludeAuthorId` (the bot itself) are
- * skipped so previous summaries don't feed into new ones.
+ * `history-rest.ts` instead, which has the same contract over plain REST — both
+ * walk the channel through `history-paginate.ts`, so only the fetch and the
+ * message shape differ between them.
  */
-export async function fetchRecentMessages(
+export function fetchRecentMessages(
   channel: TextBasedChannel,
   limit: number,
   excludeAuthorId: string,
 ): Promise<CapturedMessage[]> {
-  const collected: CapturedMessage[] = [];
-  let before: string | undefined;
-  let remaining = limit;
-
-  while (remaining > 0) {
-    const batchSize = Math.min(DISCORD_FETCH_BATCH, remaining);
-
-    let batch: Collection<string, Message>;
-    try {
-      batch = await channel.messages.fetch({ limit: batchSize, ...(before ? { before } : {}) });
-    } catch {
-      throw new HistoryError(strings.missingHistoryPermission);
-    }
-
-    if (batch.size === 0) break;
-
-    // Discord returns newest first within a batch.
-    for (const message of batch.values()) {
-      before = message.id;
-      if (message.author.id === excludeAuthorId) continue;
-      const captured = capture(message);
-      if (captured) collected.push(captured);
-    }
-
-    remaining -= batch.size;
-    if (batch.size < batchSize) break;
-  }
-
-  // Collected newest-first across batches; the transcript reads chronologically.
-  return collected.reverse();
+  return collectRecentMessages(
+    {
+      fetchBatch: async (batchSize, before) => {
+        const batch = await channel.messages.fetch({
+          limit: batchSize,
+          ...(before ? { before } : {}),
+        });
+        return [...batch.values()];
+      },
+      identify: (message) => ({ id: message.id, authorId: message.author.id }),
+      capture,
+    },
+    limit,
+    excludeAuthorId,
+  );
 }
 
 function capture(message: Message): CapturedMessage | undefined {

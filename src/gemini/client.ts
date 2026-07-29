@@ -127,11 +127,6 @@ function retryDelayFrom(error: ApiError): string | undefined {
   }
 }
 
-/** True when the reply was cut off at the output limit. */
-export function wasTruncated(response: GenerateContentResponse): boolean {
-  return response.candidates?.[0]?.finishReason === FinishReason.MAX_TOKENS;
-}
-
 /** Turns an SDK error into something worth showing in Discord. */
 export function describeGeminiError(error: unknown): string {
   if (error instanceof GeminiBlockedError || error instanceof EmptyResponseError) {

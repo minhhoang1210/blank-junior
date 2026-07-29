@@ -22,22 +22,7 @@ process.env.DISCORD_PUBLIC_KEY = publicKeyHex;
 
 const { verifyDiscordRequest } = await import("../src/http/verify.js");
 const { handleInteraction } = await import("../src/http/interactions.js");
-
-let failures = 0;
-
-function check(label: string, actual: unknown, expected: unknown): void {
-  const ok = JSON.stringify(actual) === JSON.stringify(expected);
-  if (!ok) failures++;
-  console.log(
-    `${ok ? "PASS" : "FAIL"}  ${label}` +
-      (ok ? "" : `\n      got      ${JSON.stringify(actual)}\n      expected ${JSON.stringify(expected)}`),
-  );
-}
-
-function checkThat(label: string, condition: boolean): void {
-  if (!condition) failures++;
-  console.log(`${condition ? "PASS" : "FAIL"}  ${label}`);
-}
+const { check, checkThat, report } = await import("./harness.js");
 
 function signBody(body: string, timestamp = "1700000000"): string {
   return sign(null, Buffer.from(timestamp + body, "utf8"), privateKey).toString("hex");
@@ -131,5 +116,4 @@ checkThat("unknown command schedules nothing", unknown.background === undefined)
 const malformed = await handleInteraction("not json", signBody("not json"), "1700000000");
 check("malformed body returns 400", malformed.status, 400);
 
-console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) failed.`);
-process.exit(failures === 0 ? 0 : 1);
+report();

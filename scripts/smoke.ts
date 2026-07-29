@@ -1,6 +1,6 @@
 /**
  * Offline test suite: exercises chunking, transcript building and history
- * pagination against fakes. No Discord connection, no Claude API calls.
+ * pagination against fakes. No Discord connection, no Gemini API calls.
  *
  *   npm run smoke
  */
@@ -12,22 +12,7 @@ import {
 } from "../src/discord/history.js";
 import { strings } from "../src/core/strings.js";
 import { chunkForDiscord, truncate } from "../src/util/text.js";
-
-let failures = 0;
-
-function check(label: string, actual: unknown, expected: unknown): void {
-  const ok = JSON.stringify(actual) === JSON.stringify(expected);
-  if (!ok) failures++;
-  console.log(
-    `${ok ? "PASS" : "FAIL"}  ${label}` +
-      (ok ? "" : `\n      got      ${JSON.stringify(actual)}\n      expected ${JSON.stringify(expected)}`),
-  );
-}
-
-function checkThat(label: string, condition: boolean): void {
-  if (!condition) failures++;
-  console.log(`${condition ? "PASS" : "FAIL"}  ${label}`);
-}
+import { check, checkThat, report } from "./harness.js";
 
 // --- Discord chunking -------------------------------------------------------
 console.log("--- Discord chunking");
@@ -204,5 +189,4 @@ const { channel: mixed } = makeFakeChannel(100, 2);
 const fetchedMixed = await fetchRecentMessages(mixed, 100, BOT_ID);
 check("own-bot messages are excluded", fetchedMixed.length, 50);
 
-console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) failed.`);
-process.exit(failures === 0 ? 0 : 1);
+report();

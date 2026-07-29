@@ -437,9 +437,12 @@ when a 429 appears but AI Studio shows no usage: that combination means a quota
 of *zero* rather than a spent one, and the two are indistinguishable from the
 error alone.
 
-`npm run smoke` runs `scripts/smoke.ts`: 30 checks covering reply chunking,
-transcript building and history pagination — including the >100-message
-pagination path — against fakes. No Discord connection or API key needed.
+`npm run smoke` runs both offline suites, 58 checks in all, against fakes — no
+Discord connection or API key needed. `scripts/smoke.ts` covers reply chunking,
+transcript building and history pagination, including the >100-message
+pagination path; `scripts/smoke-http.ts` covers the serverless entrypoint —
+Ed25519 signature verification against a real keypair, and command routing.
+Either can be run on its own with `npx tsx scripts/<name>.ts`.
 
 ## Notes
 

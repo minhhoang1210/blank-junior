@@ -2,7 +2,7 @@
   "name": "blank-junior",
   "version": "1.0.0",
   "private": true,
-  "description": "Blank Junior — a Discord bot that summarises channels (/tldr) and answers questions (/ask) using the Gemini API",
+  "description": "Blank Junior — a Discord bot",
   "type": "module",
   "engines": {
     "node": ">=18.17"
