@@ -10,6 +10,14 @@ import {
   fetchRecentMessages,
   type CapturedMessage,
 } from "../src/discord/history.js";
+import {
+  chooseCommand,
+  formatChoice,
+  MAX_CHOICES,
+  MIN_CHOICES,
+  parseChoices,
+  pickIndex,
+} from "../src/core/choose.js";
 import { strings } from "../src/core/strings.js";
 import { chunkForDiscord, truncate } from "../src/util/text.js";
 import { check, checkThat, report } from "./harness.js";
@@ -112,6 +120,53 @@ checkThat(
   "never prints the placeholder as a channel name",
   !strings.tldr.title(undefined).includes(strings.tldr.thisChannel),
 );
+
+// --- /choose ----------------------------------------------------------------
+console.log("\n--- /choose");
+
+check("splits on the separator", parseChoices("phở|bún bò|cơm tấm"), ["phở", "bún bò", "cơm tấm"]);
+check("trims spacing around each option", parseChoices(" phở | bún bò "), ["phở", "bún bò"]);
+check("drops empty entries", parseChoices("phở||bún bò|"), ["phở", "bún bò"]);
+check("keeps duplicates, which are how an option is weighted", parseChoices("a|a|b").length, 3);
+check("a single option is not yet a choice", parseChoices("phở").length, 1);
+check("separators alone yield nothing", parseChoices("|||"), []);
+check("keeps diacritics intact", parseChoices("Chương|Phiên ngoại"), ["Chương", "Phiên ngoại"]);
+
+// The draw must stay inside the list, and must be able to reach either end of it.
+const draws = Array.from({ length: 2000 }, () => pickIndex(3));
+checkThat("every draw is a valid index", draws.every((index) => index >= 0 && index < 3));
+check("every option can be drawn", [...new Set(draws)].sort(), [0, 1, 2]);
+
+// 2000 uniform draws over 3 options land near 667 each; 500 is far outside the
+// noise but loose enough that a fair picker will not trip it.
+const tally = [0, 1, 2].map((index) => draws.filter((draw) => draw === index).length);
+checkThat("the draw is not visibly skewed", tally.every((count) => count > 500));
+
+const picked = formatChoice(["phở", "bún bò", "cơm tấm"], 1);
+check("announces the option at the drawn index", picked.text, "🎲 Mình chọn: **bún bò**");
+check("lists every candidate", picked.embeds[0]?.fields?.[0]?.value, "• phở\n• **bún bò**\n• cơm tấm");
+check("footer counts the candidates", picked.embeds[0]?.footer?.text, "3 phương án · rút ngẫu nhiên");
+
+const longOption = "x".repeat(200);
+const clipped = formatChoice([longOption, "b"], 0);
+checkThat(
+  "the candidate list clips a long option",
+  (clipped.embeds[0]?.fields?.[0]?.value.length ?? 0) < 100,
+);
+checkThat("but the drawn option is announced in full", clipped.text.includes(longOption));
+
+const many = formatChoice(Array.from({ length: MAX_CHOICES }, (_, i) => `option ${i}`), 0);
+checkThat(
+  "a full list still fits Discord's 1024-char field cap",
+  (many.embeds[0]?.fields?.[0]?.value.length ?? 0) <= 1024,
+);
+
+const drawn = chooseCommand(["phở", "bún bò"]);
+checkThat(
+  "the reply always names one of the options",
+  drawn.text === "🎲 Mình chọn: **phở**" || drawn.text === "🎲 Mình chọn: **bún bò**",
+);
+checkThat("two is enough to choose between", MIN_CHOICES === 2);
 
 // --- History pagination -----------------------------------------------------
 console.log("\n--- History pagination");

@@ -1,5 +1,7 @@
 import { config } from "../config.js";
+import { chooseCommand, MAX_CHOICES, MIN_CHOICES, parseChoices } from "../core/choose.js";
 import { strings } from "../core/strings.js";
+import type { Embed } from "../core/types.js";
 import { logger } from "../util/logger.js";
 import { runAsk, runEpub, runTldr } from "./commands.js";
 import { verifyDiscordRequest } from "./verify.js";
@@ -128,6 +130,17 @@ function routeCommand(interaction: Interaction): InteractionResult {
     return { ...deferred, background: () => runEpub(token, url) };
   }
 
+  // The only command that needs no deferral: it does no I/O, so the answer is
+  // ready inside the 3-second window and goes out as the response itself.
+  if (name === "choose") {
+    const choices = parseChoices(String(optionValue(interaction, "options") ?? ""));
+    if (choices.length < MIN_CHOICES) return reply(strings.choose.tooFew);
+    if (choices.length > MAX_CHOICES) return reply(strings.choose.tooMany(MAX_CHOICES));
+
+    const chosen = chooseCommand(choices);
+    return immediate(chosen.text, chosen.embeds);
+  }
+
   logger.warn(`Received unknown command /${name ?? "(none)"}`);
   return reply(strings.unknownCommand);
 }
@@ -137,6 +150,22 @@ function reply(content: string): InteractionResult {
   return {
     status: 200,
     json: { type: CallbackType.ChannelMessage, data: { content, flags: 1 << 6 } },
+  };
+}
+
+/**
+ * An immediate, public reply, for a command whose answer needs no work.
+ *
+ * Mentions are disarmed because the content is built from what the user typed:
+ * without this an `@everyone` echoed back would ping the server through the bot.
+ */
+function immediate(content: string, embeds: Embed[]): InteractionResult {
+  return {
+    status: 200,
+    json: {
+      type: CallbackType.ChannelMessage,
+      data: { content, embeds, allowed_mentions: { parse: [] } },
+    },
   };
 }
 

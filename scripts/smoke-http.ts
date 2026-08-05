@@ -109,6 +109,53 @@ const askEmpty = await post({
 check("/ask with a blank question replies immediately", (askEmpty.json as { type: number }).type, 4);
 checkThat("/ask with a blank question schedules nothing", askEmpty.background === undefined);
 
+const epub = await post({
+  type: 2,
+  token: "tok",
+  data: { name: "epub", options: [{ name: "url", value: "https://ten-mien.wordpress.com/" }] },
+});
+check("/epub defers", epub.json, { type: 5 });
+checkThat("/epub schedules background work", typeof epub.background === "function");
+
+// /choose is the one command that answers inside the 3-second window instead of
+// deferring, so its whole reply must be in the response itself.
+const choose = await post({
+  type: 2,
+  token: "tok",
+  data: { name: "choose", options: [{ name: "options", value: "phở|bún bò|cơm tấm" }] },
+});
+const chooseData = (choose.json as { type: number; data: Record<string, unknown> }).data;
+check("/choose answers immediately", (choose.json as { type: number }).type, 4);
+checkThat("/choose schedules nothing", choose.background === undefined);
+checkThat("/choose names one of the options", /phở|bún bò|cơm tấm/.test(String(chooseData.content)));
+checkThat("/choose is public, not ephemeral", chooseData.flags === undefined);
+check("/choose disarms mentions", chooseData.allowed_mentions, { parse: [] });
+checkThat("/choose carries the candidate embed", Array.isArray(chooseData.embeds));
+
+const chooseOne = await post({
+  type: 2,
+  token: "tok",
+  data: { name: "choose", options: [{ name: "options", value: "phở" }] },
+});
+check("/choose with one option is refused", (chooseOne.json as { type: number }).type, 4);
+checkThat(
+  "refusing one option is ephemeral",
+  ((chooseOne.json as { data: { flags?: number } }).data.flags ?? 0) !== 0,
+);
+
+const chooseMany = await post({
+  type: 2,
+  token: "tok",
+  data: {
+    name: "choose",
+    options: [{ name: "options", value: Array.from({ length: 21 }, (_, i) => i).join("|") }],
+  },
+});
+checkThat(
+  "/choose refuses more options than it can list",
+  String((chooseMany.json as { data: { content: string } }).data.content).includes("tối đa"),
+);
+
 const unknown = await post({ type: 2, token: "tok", data: { name: "nope" } });
 check("unknown command replies immediately", (unknown.json as { type: number }).type, 4);
 checkThat("unknown command schedules nothing", unknown.background === undefined);

@@ -46,7 +46,8 @@ export const strings = {
 
   epub: {
     command: "Tải một truyện trên WordPress về dưới dạng EPUB",
-    option: "Liên kết tới trang mục lục của truyện (hoặc tới một truyện ngắn một trang)",
+    option:
+      "Liên kết tới trang mục lục của truyện (hoặc tới một truyện ngắn một trang)",
     alreadyRunning: "Bạn đang có một truyện đang tải. Đợi nó xong đã nhé.",
     invalidUrl: "Đó không phải là một liên kết http/https hợp lệ.",
 
@@ -54,13 +55,15 @@ export const strings = {
     downloading: (done: number, total: number) =>
       `📖 Đang tải chương ${done}/${total}…`,
     packing: "📦 Đang đóng gói EPUB…",
-    retryingWithoutImages: "📦 Tệp quá lớn — đang đóng gói lại, bỏ ảnh minh hoạ…",
+    retryingWithoutImages:
+      "📦 Tệp quá lớn — đang đóng gói lại, bỏ ảnh minh hoạ…",
 
     ready: (title: string) => `📖 **${title}**`,
     /** Appended when the download did not cover the whole story. */
     truncated: (fetched: number, discovered: number) =>
       `\n⚠️ Mới tải được ${fetched}/${discovered} chương (hết thời gian hoặc chạm giới hạn).`,
-    someFailed: (failed: number) => `\n⚠️ ${failed} chương không tải được và đã bị bỏ qua.`,
+    someFailed: (failed: number) =>
+      `\n⚠️ ${failed} chương không tải được và đã bị bỏ qua.`,
 
     chapters: "Chương",
     words: "Số từ",
@@ -75,6 +78,19 @@ export const strings = {
     serverlessLimited:
       "Bản chạy trên Vercel chỉ có 60 giây cho mỗi lệnh, nên `/epub` ở đây chỉ tải được " +
       "truyện rất ngắn. Truyện dài cần bản bot chạy thường trực (gateway).",
+  },
+
+  choose: {
+    command: "Chọn ngẫu nhiên giúp bạn một trong nhiều phương án",
+    option: "Các phương án, ngăn cách bằng dấu | — ví dụ: A | B | C",
+    tooFew:
+      "Hãy đưa ít nhất 2 phương án, ngăn cách bằng dấu `|`. " +
+      "Ví dụ: `A | B | C`",
+    tooMany: (max: number) =>
+      `Nhiều quá — mình chỉ chọn được trong tối đa ${max} phương án.`,
+    result: (choice: string) => `🎲 Mình chọn: **${choice}**`,
+    candidates: "Các phương án",
+    footer: (count: number) => `${count} phương án · chọn ngẫu nhiên`,
   },
 
   unknownCommand: "Lệnh này mình chưa hỗ trợ.",

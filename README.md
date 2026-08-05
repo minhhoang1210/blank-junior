@@ -1,9 +1,10 @@
-?# Blank Junior
+# Blank Junior
 
-A TypeScript Discord bot with three slash commands. Two are powered by the free
-tier of the Google Gemini API; the third scrapes a WordPress story into an EPUB
-and needs no API key at all. **It replies in Vietnamese** — both the model's
-answers and the bot's own messages.
+A TypeScript Discord bot with four slash commands. Two are powered by the free
+tier of the Google Gemini API; the other two need no API key at all — one
+scrapes a WordPress story into an EPUB, the other just picks between things.
+**It replies in Vietnamese** — both the model's answers and the bot's own
+messages.
 
 The model's output language is `RESPONSE_LANGUAGE` in `.env` (default
 `Vietnamese`), so switching it needs no code change. The bot's own text — command
@@ -19,7 +20,11 @@ changing that means editing the strings.
 ```
 
 ```
-/epub url:https://truyenabc.wordpress.com/muc-luc/
+/epub url:https://ten-mien.wordpress.com/ten-truyen/
+```
+
+```
+/choose options:bún bò | phở | cơm tấm
 ```
 
 ## Commands
@@ -59,15 +64,15 @@ wasted first attempt if it doesn't.
 
 ### `/epub` — download a WordPress story as an EPUB
 
-| Option | Type   | Required | Description                                              |
-| ------ | ------ | -------- | -------------------------------------------------------- |
-| `url`  | string | yes      | The story's table-of-contents page, or a one-page story  |
+| Option | Type   | Required | Description                                             |
+| ------ | ------ | -------- | ------------------------------------------------------- |
+| `url`  | string | yes      | The story's table-of-contents page, or a one-page story |
 
 Reads the index page, follows every chapter link on it, and uploads the result
 as an EPUB attachment. No Gemini involved — this command costs no quota.
 
 A link counts as a chapter when its URL or anchor text contains `chương`,
-`chap`, `chapter`, `phiên ngoại`, `ngoại truyện` or `vị thành`, compared with
+`chap`, `chapter`, `phiên ngoại`, `ngoại truyện` or `vĩ thanh`, compared with
 diacritics stripped so `Chương 12` and `chuong-12` are the same thing. Links to
 other hosts are ignored. A page with no chapter links at all is not an error: it
 becomes a one-chapter book, which is what a one-shot posted as a single
@@ -99,7 +104,7 @@ without hammering someone's blog.
 To try a source site without going through Discord:
 
 ```bash
-npm run epub -- https://truyenabc.wordpress.com/muc-luc/ --max 20
+npm run epub -- https://ten-mien.wordpress.com/ten-truyen/ --max 20
 ```
 
 **On the serverless deployment this command is close to useless.** Vercel kills
@@ -107,6 +112,30 @@ the function after 60 seconds (`maxDuration` in `vercel.json`), so `/epub`
 budgets 40 of them and uploads whatever it managed to read. That is a handful of
 chapters. Long stories need the gateway shape — see
 [Running it 24/7](#running-it-247).
+
+### `/choose` — pick one at random
+
+| Option    | Type   | Required | Description                                    |
+| --------- | ------ | -------- | ---------------------------------------------- |
+| `options` | string | yes      | The candidates, separated by `\|` (2–20 of them) |
+
+Splits the input on `|`, draws one uniformly at random, and posts it with the
+full list underneath. No Gemini, no network, no quota — and it is the only
+command that answers without deferring, because there is nothing to wait for.
+
+Blank entries are ignored, so `a||b` and a trailing separator are both fine.
+Duplicates are kept rather than collapsed: repeating an option is the only way
+to weight it, and de-duplicating would quietly change the odds. Only `|` splits
+— commas don't — because options in Vietnamese contain commas often enough that
+guessing would be worse than asking.
+
+The draw uses `crypto.randomInt`, not `Math.random`, which skews when the range
+doesn't divide evenly into its output. The bias is negligible anywhere else in
+this bot; being fair is the entire job of this command.
+
+Mentions are disarmed on the reply. The options are the user's own text echoed
+back by the bot, so without that an `@everyone` tucked into one of them would
+ping the whole server with the bot's permissions rather than the author's.
 
 ## Setup
 
@@ -162,18 +191,18 @@ npm run build && npm start
 
 ## Configuration
 
-| Variable                | Default                 | Purpose                                        |
-| ----------------------- | ----------------------- | ---------------------------------------------- |
-| `GEMINI_MODEL`          | `gemini-2.5-flash`      | Model to use — see below                       |
-| `DISCORD_GUILD_ID`      | —                       | Register commands to one server for instant updates |
-| `RESPONSE_LANGUAGE`     | `Vietnamese`            | Language the model answers in                  |
-| `ENABLE_SEARCH_GROUNDING` | `true`                | Google Search on `/ask` — has its own quota    |
-| `DEFAULT_TLDR_MESSAGES` | `100`                   | `/tldr` message count when the option is omitted |
-| `GEMINI_TIMEOUT_MS`     | `120000`                | Per-request timeout against the Gemini API     |
-| `EPUB_MAX_CHAPTERS`     | `400`                   | Most chapters `/epub` will download from one story |
-| `EPUB_CONCURRENCY`      | `4`                     | Parallel chapter fetches — raising it leans harder on the source site |
-| `EPUB_TIME_BUDGET_MS`   | `780000`                | Wall clock `/epub` may spend on one book (capped at 14 min) |
-| `EPUB_MAX_UPLOAD_MB`    | `9`                     | Attachment ceiling — raise it on a boosted server |
+| Variable                  | Default            | Purpose                                                               |
+| ------------------------- | ------------------ | --------------------------------------------------------------------- |
+| `GEMINI_MODEL`            | `gemini-2.5-flash` | Model to use — see below                                              |
+| `DISCORD_GUILD_ID`        | —                  | Register commands to one server for instant updates                   |
+| `RESPONSE_LANGUAGE`       | `Vietnamese`       | Language the model answers in                                         |
+| `ENABLE_SEARCH_GROUNDING` | `true`             | Google Search on `/ask` — has its own quota                           |
+| `DEFAULT_TLDR_MESSAGES`   | `100`              | `/tldr` message count when the option is omitted                      |
+| `GEMINI_TIMEOUT_MS`       | `120000`           | Per-request timeout against the Gemini API                            |
+| `EPUB_MAX_CHAPTERS`       | `400`              | Most chapters `/epub` will download from one story                    |
+| `EPUB_CONCURRENCY`        | `4`                | Parallel chapter fetches — raising it leans harder on the source site |
+| `EPUB_TIME_BUDGET_MS`     | `780000`           | Wall clock `/epub` may spend on one book (capped at 14 min)           |
+| `EPUB_MAX_UPLOAD_MB`      | `9`                | Attachment ceiling — raise it on a boosted server                     |
 
 ## Choosing a model
 
@@ -238,11 +267,13 @@ numbers tell you which command to rein in. The levers, roughly in order:
        └ parser.ts     strip WordPress furniture, sanitise, resolve URLs
        └ build.ts      XHTML + OPF + NCX + cover, zipped as EPUB 3
        └ reply.ts      upload the book as an attachment
+
+/choose ─ choose.ts    split on |, draw with crypto.randomInt, answer in place
 ```
 
 **Blocked responses.** Gemini's safety filters return a normal HTTP 200 with an
 empty candidate rather than an error, so both commands check `promptFeedback`
-and the candidate's `finishReason` *before* reading the text. A filtered prompt
+and the candidate's `finishReason` _before_ reading the text. A filtered prompt
 or response surfaces as a clear message instead of a blank reply.
 
 **Output budget.** On Gemini 2.5 models thinking tokens count against
@@ -276,10 +307,10 @@ book that fails to open.
 The bot ships in **two interchangeable shapes**, sharing the same commands,
 prompts and Gemini layer:
 
-| Shape | Entrypoint | Where it runs |
-| --- | --- | --- |
-| **HTTP interactions** (serverless) | `api/interactions.ts` | Vercel |
-| **Gateway** (always-on process) | `src/index.ts` | VPS, Docker, Fly.io, a Pi |
+| Shape                              | Entrypoint            | Where it runs             |
+| ---------------------------------- | --------------------- | ------------------------- |
+| **HTTP interactions** (serverless) | `api/interactions.ts` | Vercel                    |
+| **Gateway** (always-on process)    | `src/index.ts`        | VPS, Docker, Fly.io, a Pi |
 
 Discord pushes slash commands to an HTTPS endpoint in the first shape, and the
 bot holds an outbound WebSocket open in the second. Only the gateway shape can
@@ -331,9 +362,9 @@ npm run deploy
 ```
 
 **Why `vercel.json` skips the build.** `package.json`'s `build` script compiles
-the *gateway* bot into `dist/`, which Vercel has no use for — it builds `api/`
-itself. Left alone, Vercel would run that script and then fail with *"No Output
-Directory named `public` found"*, because it assumes a build script means a
+the _gateway_ bot into `dist/`, which Vercel has no use for — it builds `api/`
+itself. Left alone, Vercel would run that script and then fail with _"No Output
+Directory named `public` found"_, because it assumes a build script means a
 static site. So [vercel.json](vercel.json) replaces the build command with a
 no-op and points `outputDirectory` at [public/](public), which holds a single
 placeholder page. Nothing about the bot is served from there.
@@ -402,7 +433,7 @@ above on Linux. On Windows, `pm2 start dist/index.js --name blank-junior` plus
 
 ### Operational notes
 
-- **Node 20 or newer**, matching the `engines` field.
+- **Node 18.17 or newer**, matching the `engines` field.
 - **Never commit `.env`.** It is gitignored; put the secrets in the host's own
   secret storage where the platform offers it.
 - **Discord.js reconnects by itself** after network blips; the process manager
@@ -434,14 +465,15 @@ reliable way to pick a `GEMINI_MODEL`, since availability varies by key.
 `npm run probe` sends two tiny requests to your configured model, one plain and
 one with Google Search grounding, and reports which quota refuses you. Use it
 when a 429 appears but AI Studio shows no usage: that combination means a quota
-of *zero* rather than a spent one, and the two are indistinguishable from the
+of _zero_ rather than a spent one, and the two are indistinguishable from the
 error alone.
 
-`npm run smoke` runs both offline suites, 58 checks in all, against fakes — no
+`npm run smoke` runs both offline suites, 87 checks in all, against fakes — no
 Discord connection or API key needed. `scripts/smoke.ts` covers reply chunking,
-transcript building and history pagination, including the >100-message
-pagination path; `scripts/smoke-http.ts` covers the serverless entrypoint —
-Ed25519 signature verification against a real keypair, and command routing.
+transcript building, history pagination (including the >100-message pagination
+path) and the `/choose` draw; `scripts/smoke-http.ts` covers the serverless
+entrypoint — Ed25519 signature verification against a real keypair, and command
+routing.
 Either can be run on its own with `npx tsx scripts/<name>.ts`.
 
 ## Notes
