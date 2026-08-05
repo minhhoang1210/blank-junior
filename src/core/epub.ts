@@ -111,7 +111,11 @@ export async function buildStoryEpub(request: EpubRequest): Promise<BotReply> {
         footer: { text: strings.epub.source(hostOf(story.meta.sourceUrl)) },
       },
     ],
-    file: { filename: `${slugify(story.meta.title)}.epub`, data },
+    file: {
+      filename: `${slugify(story.meta.title)}.epub`,
+      data,
+      contentType: "application/epub+zip",
+    },
   };
 }
 

@@ -19,6 +19,12 @@ import {
   pickIndex,
 } from "../src/core/choose.js";
 import { strings } from "../src/core/strings.js";
+import {
+  type AttachmentRef,
+  describeImageProblem,
+  MAX_IMAGE_BYTES,
+  uploadNameFor,
+} from "../src/discord/attachment.js";
 import { chunkForDiscord, truncate } from "../src/util/text.js";
 import { check, checkThat, report } from "./harness.js";
 
@@ -119,6 +125,76 @@ check("omits the channel when unknown", strings.tldr.title(undefined), "Tóm t�
 checkThat(
   "never prints the placeholder as a channel name",
   !strings.tldr.title(undefined).includes(strings.tldr.thisChannel),
+);
+
+// --- /ocr attachment vetting ------------------------------------------------
+console.log("\n--- /ocr attachment vetting");
+
+function attached(overrides: Partial<AttachmentRef> = {}): AttachmentRef {
+  return {
+    url: "https://cdn.discordapp.com/attachments/1/2/menu.png",
+    filename: "menu.png",
+    contentType: "image/png",
+    size: 120_000,
+    ...overrides,
+  };
+}
+
+check("a normal PNG is accepted", describeImageProblem(attached()), undefined);
+check(
+  "media.discordapp.net is accepted too",
+  describeImageProblem(attached({ url: "https://media.discordapp.net/attachments/1/2/a.jpg" })),
+  undefined,
+);
+check(
+  "a charset parameter doesn't confuse the type check",
+  describeImageProblem(attached({ contentType: "image/jpeg; charset=binary" })),
+  undefined,
+);
+check(
+  "an uppercase type is still recognised",
+  describeImageProblem(attached({ contentType: "IMAGE/PNG" })),
+  undefined,
+);
+check("size is optional", describeImageProblem(attached({ size: undefined })), undefined);
+
+checkThat("a PDF is refused", describeImageProblem(attached({ contentType: "application/pdf" })) !== undefined);
+checkThat("an SVG is refused", describeImageProblem(attached({ contentType: "image/svg+xml" })) !== undefined);
+checkThat("an unknown type is refused", describeImageProblem(attached({ contentType: undefined })) !== undefined);
+checkThat(
+  "an oversized image is refused before it is downloaded",
+  describeImageProblem(attached({ size: MAX_IMAGE_BYTES + 1 })) !== undefined,
+);
+checkThat(
+  "an image exactly at the ceiling is allowed",
+  describeImageProblem(attached({ size: MAX_IMAGE_BYTES })) === undefined,
+);
+
+// The URL is Discord's own, but the host is checked so the trust boundary is
+// explicit rather than assumed.
+checkThat(
+  "a non-Discord host is refused",
+  describeImageProblem(attached({ url: "https://evil.example.com/a.png" })) !== undefined,
+);
+checkThat(
+  "a lookalike host is refused",
+  describeImageProblem(attached({ url: "https://cdn.discordapp.com.evil.example/a.png" })) !==
+    undefined,
+);
+checkThat(
+  "a file:// url is refused",
+  describeImageProblem(attached({ url: "file:///etc/passwd" })) !== undefined,
+);
+checkThat("a malformed url is refused", describeImageProblem(attached({ url: "not a url" })) !== undefined);
+
+// The embed points at `attachment://<filename>`, so the name the reply uploads
+// under has to be predictable — a mismatch renders as a broken image.
+check("a PNG is re-uploaded as .png", uploadNameFor("image/png"), "anh.png");
+check("a JPEG gets the short extension", uploadNameFor("image/jpeg"), "anh.jpg");
+check("WebP keeps its own", uploadNameFor("image/webp"), "anh.webp");
+checkThat(
+  "the upload name is safe for an attachment:// reference",
+  /^[a-z0-9.]+$/.test(uploadNameFor("image/heic")),
 );
 
 // --- /choose ----------------------------------------------------------------

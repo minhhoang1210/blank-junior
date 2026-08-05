@@ -104,21 +104,22 @@ export function fetchChannelMessages(
 export function editOriginalResponse(
   interactionToken: string,
   body: { content?: string; embeds?: unknown[] },
-  file?: { filename: string; data: Uint8Array },
+  file?: { filename: string; data: Uint8Array; contentType?: string },
 ): Promise<unknown> {
   const path = `/webhooks/${config.clientId}/${interactionToken}/messages/@original`;
-  if (!file) return request("PATCH", path, { body, auth: "none" });
+  const payload = { ...body, allowed_mentions: NO_MENTIONS };
+  if (!file) return request("PATCH", path, { body: payload, auth: "none" });
 
   // Attachments go up as multipart: the JSON payload names the file by index,
   // and `files[0]` carries the bytes it refers to.
   const form = new FormData();
   form.append(
     "payload_json",
-    JSON.stringify({ ...body, attachments: [{ id: 0, filename: file.filename }] }),
+    JSON.stringify({ ...payload, attachments: [{ id: 0, filename: file.filename }] }),
   );
   form.append(
     "files[0]",
-    new Blob([file.data], { type: "application/epub+zip" }),
+    new Blob([file.data], { type: file.contentType ?? "application/octet-stream" }),
     file.filename,
   );
 
@@ -131,7 +132,16 @@ export function createFollowup(
   body: { content: string },
 ): Promise<unknown> {
   return request("POST", `/webhooks/${config.clientId}/${interactionToken}`, {
-    body,
+    body: { ...body, allowed_mentions: NO_MENTIONS },
     auth: "none",
   });
 }
+
+/**
+ * Every reply this bot sends is built from something a user supplied — channel
+ * messages, model output, the text inside an uploaded image. Rendering a
+ * mention out of any of that would fire with the *bot's* permissions rather
+ * than the author's, so an `@everyone` smuggled through one of those routes
+ * would ping the whole server.
+ */
+const NO_MENTIONS = { parse: [] as string[] };

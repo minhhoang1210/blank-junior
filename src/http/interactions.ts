@@ -2,8 +2,9 @@ import { config } from "../config.js";
 import { chooseCommand, MAX_CHOICES, MIN_CHOICES, parseChoices } from "../core/choose.js";
 import { strings } from "../core/strings.js";
 import type { Embed } from "../core/types.js";
+import { type AttachmentRef, describeImageProblem } from "../discord/attachment.js";
 import { logger } from "../util/logger.js";
-import { runAsk, runEpub, runTldr } from "./commands.js";
+import { runAsk, runEpub, runOcr, runTldr } from "./commands.js";
 import { verifyDiscordRequest } from "./verify.js";
 
 /** Discord interaction types we handle. */
@@ -24,13 +25,28 @@ interface CommandOption {
   value?: string | number | boolean;
 }
 
+/**
+ * An attachment option carries only the file's id; the file itself is listed
+ * once under `resolved`, keyed by that id.
+ */
+interface ResolvedAttachment {
+  url?: string;
+  filename?: string;
+  content_type?: string;
+  size?: number;
+}
+
 interface Interaction {
   type: number;
   token: string;
   channel_id?: string;
   /** Partial channel object; present on modern API versions, hence optional. */
   channel?: { id?: string; name?: string | null };
-  data?: { name?: string; options?: CommandOption[] };
+  data?: {
+    name?: string;
+    options?: CommandOption[];
+    resolved?: { attachments?: Record<string, ResolvedAttachment> };
+  };
 }
 
 export interface InteractionResult {
@@ -130,6 +146,18 @@ function routeCommand(interaction: Interaction): InteractionResult {
     return { ...deferred, background: () => runEpub(token, url) };
   }
 
+  if (name === "ocr") {
+    const attachment = resolveAttachment(interaction, "image");
+    if (!attachment) return reply(strings.ocr.missingImage);
+
+    // Same as the gateway path: refuse a non-image before deferring, so the
+    // complaint stays private rather than replacing a "thinking…" placeholder.
+    const problem = describeImageProblem(attachment);
+    if (problem) return reply(problem);
+
+    return { ...deferred, background: () => runOcr(token, attachment) };
+  }
+
   // The only command that needs no deferral: it does no I/O, so the answer is
   // ready inside the 3-second window and goes out as the response itself.
   if (name === "choose") {
@@ -171,4 +199,18 @@ function immediate(content: string, embeds: Embed[]): InteractionResult {
 
 function optionValue(interaction: Interaction, name: string): string | number | boolean | undefined {
   return interaction.data?.options?.find((option) => option.name === name)?.value;
+}
+
+/** Looks an attachment option's id up in the payload's `resolved` map. */
+function resolveAttachment(interaction: Interaction, name: string): AttachmentRef | undefined {
+  const id = String(optionValue(interaction, name) ?? "");
+  const raw = id ? interaction.data?.resolved?.attachments?.[id] : undefined;
+  if (!raw?.url) return undefined;
+
+  return {
+    url: raw.url,
+    filename: raw.filename ?? "image",
+    ...(raw.content_type ? { contentType: raw.content_type } : {}),
+    ...(raw.size !== undefined ? { size: raw.size } : {}),
+  };
 }

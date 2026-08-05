@@ -2,9 +2,11 @@ import { config, SERVERLESS_EPUB_BUDGET_MS } from "../config.js";
 import { askJob } from "../core/ask.js";
 import { describeError } from "../core/deliver.js";
 import { epubJob } from "../core/epub.js";
+import { ocrJob } from "../core/ocr.js";
 import { runCommand } from "../core/run.js";
 import { tldrJob } from "../core/tldr.js";
 import type { Attachment, Embed, ReplyTransport } from "../core/types.js";
+import type { AttachmentRef } from "../discord/attachment.js";
 import { fetchRecentMessagesRest } from "../discord/history-rest.js";
 import { createFollowup, editOriginalResponse, fetchChannel } from "../discord/rest.js";
 import { logger } from "../util/logger.js";
@@ -71,4 +73,12 @@ export function runAsk(token: string, question: string): Promise<void> {
  */
 export function runEpub(token: string, url: string): Promise<void> {
   return runCommand(webhookTransport(token), epubJob(url, SERVERLESS_EPUB_BUDGET_MS));
+}
+
+/**
+ * One CDN download plus one model call fits inside `maxDuration` comfortably,
+ * so unlike `/epub` this command needs no reduced budget on the serverless path.
+ */
+export function runOcr(token: string, attachment: AttachmentRef): Promise<void> {
+  return runCommand(webhookTransport(token), ocrJob(attachment));
 }

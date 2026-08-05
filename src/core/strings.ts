@@ -80,6 +80,16 @@ export const strings = {
       "truyện rất ngắn. Truyện dài cần bản bot chạy thường trực (gateway).",
   },
 
+  ocr: {
+    command: "Đọc chữ trong một tấm ảnh",
+    option: "Ảnh cần đọc chữ (PNG, JPEG, WebP, HEIC)",
+    alreadyRunning: "Bạn đang có một ảnh đang được đọc. Đợi nó xong đã nhé.",
+    missingImage: "Bạn hãy đính kèm một tấm ảnh nhé.",
+    reading: "🔍 Đang đọc ảnh…",
+    noText: "Mình không thấy chữ nào trong ảnh này.",
+    footer: "Đọc bởi Gemini · giữ nguyên ngôn ngữ trong ảnh",
+  },
+
   choose: {
     command: "Chọn ngẫu nhiên giúp bạn một trong nhiều phương án",
     option: "Các phương án, ngăn cách bằng dấu | — ví dụ: a | b | c",

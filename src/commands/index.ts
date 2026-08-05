@@ -2,6 +2,7 @@ import type { ChatInputCommandInteraction, SlashCommandOptionsOnlyBuilder } from
 import * as askCommand from "./ask.js";
 import * as chooseCommand from "./choose.js";
 import * as epubCommand from "./epub.js";
+import * as ocrCommand from "./ocr.js";
 import * as tldrCommand from "./tldr.js";
 
 export interface Command {
@@ -9,6 +10,12 @@ export interface Command {
   execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
 }
 
-export const commands: Command[] = [tldrCommand, askCommand, epubCommand, chooseCommand];
+export const commands: Command[] = [
+  tldrCommand,
+  askCommand,
+  epubCommand,
+  ocrCommand,
+  chooseCommand,
+];
 
 export const commandsByName = new Map(commands.map((command) => [command.data.name, command]));

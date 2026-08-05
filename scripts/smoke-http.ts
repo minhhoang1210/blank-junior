@@ -22,6 +22,7 @@ process.env.DISCORD_PUBLIC_KEY = publicKeyHex;
 
 const { verifyDiscordRequest } = await import("../src/http/verify.js");
 const { handleInteraction } = await import("../src/http/interactions.js");
+const { interpretTranscription, NO_TEXT_SENTINEL } = await import("../src/gemini/ocr.js");
 const { check, checkThat, report } = await import("./harness.js");
 
 function signBody(body: string, timestamp = "1700000000"): string {
@@ -116,6 +117,85 @@ const epub = await post({
 });
 check("/epub defers", epub.json, { type: 5 });
 checkThat("/epub schedules background work", typeof epub.background === "function");
+
+// --- /ocr -------------------------------------------------------------------
+console.log("\n--- /ocr");
+
+const IMAGE_ID = "9001";
+
+function ocrPayload(attachment: Record<string, unknown>) {
+  return {
+    type: 2,
+    token: "tok",
+    data: {
+      name: "ocr",
+      options: [{ name: "image", value: IMAGE_ID }],
+      resolved: { attachments: { [IMAGE_ID]: attachment } },
+    },
+  };
+}
+
+const ocr = await post(
+  ocrPayload({
+    url: "https://cdn.discordapp.com/attachments/1/2/menu.png",
+    filename: "menu.png",
+    content_type: "image/png",
+    size: 120_000,
+  }),
+);
+check("/ocr defers", ocr.json, { type: 5 });
+checkThat("/ocr schedules background work", typeof ocr.background === "function");
+
+// The option carries only an id; losing the resolved entry must not crash it.
+const ocrUnresolved = await post({
+  type: 2,
+  token: "tok",
+  data: { name: "ocr", options: [{ name: "image", value: IMAGE_ID }] },
+});
+check("/ocr without a resolved file replies immediately", (ocrUnresolved.json as { type: number }).type, 4);
+checkThat("/ocr without a resolved file schedules nothing", ocrUnresolved.background === undefined);
+
+const ocrPdf = await post(
+  ocrPayload({
+    url: "https://cdn.discordapp.com/attachments/1/2/hoa-don.pdf",
+    filename: "hoa-don.pdf",
+    content_type: "application/pdf",
+    size: 90_000,
+  }),
+);
+check("/ocr refuses a non-image before deferring", (ocrPdf.json as { type: number }).type, 4);
+checkThat("/ocr refuses a non-image without scheduling work", ocrPdf.background === undefined);
+
+const ocrForeign = await post(
+  ocrPayload({
+    url: "https://evil.example.com/a.png",
+    filename: "a.png",
+    content_type: "image/png",
+    size: 1000,
+  }),
+);
+check("/ocr refuses a non-Discord host", (ocrForeign.json as { type: number }).type, 4);
+checkThat("/ocr refuses a non-Discord host without scheduling work", ocrForeign.background === undefined);
+
+check("the empty-image sentinel is recognised", interpretTranscription(NO_TEXT_SENTINEL), {
+  text: "",
+  empty: true,
+});
+check("the sentinel is recognised despite stray whitespace", interpretTranscription(`\n${NO_TEXT_SENTINEL}  `), {
+  text: "",
+  empty: true,
+});
+check("a real transcription is kept whole", interpretTranscription("  Bún bò Huế\n50.000đ  "), {
+  text: "Bún bò Huế\n50.000đ",
+  empty: false,
+});
+check("the sentinel inside a longer transcription is not a match", interpretTranscription(`${NO_TEXT_SENTINEL} is a sentinel`), {
+  text: `${NO_TEXT_SENTINEL} is a sentinel`,
+  empty: false,
+});
+
+// --- /choose ----------------------------------------------------------------
+console.log("\n--- /choose");
 
 // /choose is the one command that answers inside the 3-second window instead of
 // deferring, so its whole reply must be in the response itself.

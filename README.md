@@ -1,6 +1,6 @@
 # Blank Junior
 
-A TypeScript Discord bot with four slash commands. Two are powered by the free
+A TypeScript Discord bot with five slash commands. Three are powered by the free
 tier of the Google Gemini API; the other two need no API key at all — one
 scrapes a WordPress story into an EPUB, the other just picks between things.
 **It replies in Vietnamese** — both the model's answers and the bot's own
@@ -21,6 +21,10 @@ changing that means editing the strings.
 
 ```
 /epub url:https://ten-mien.wordpress.com/ten-truyen/
+```
+
+```
+/ocr image:[đính kèm ảnh]
 ```
 
 ```
@@ -112,6 +116,55 @@ the function after 60 seconds (`maxDuration` in `vercel.json`), so `/epub`
 budgets 40 of them and uploads whatever it managed to read. That is a handful of
 chapters. Long stories need the gateway shape — see
 [Running it 24/7](#running-it-247).
+
+### `/ocr` — read the text in an image
+
+| Option  | Type       | Required | Description                            |
+| ------- | ---------- | -------- | -------------------------------------- |
+| `image` | attachment | yes      | The image to read (PNG, JPEG, WebP, HEIC) |
+
+Downloads the attachment, sends it to Gemini as an inline image part, and posts
+back a transcription with the source image shown under it. Image input is not
+gated behind a paid tier and has no separate quota of its own — unlike search
+grounding, if your key can call the model at all it can send it an image. The
+image does consume tokens against the same per-minute budget as everything else.
+
+The reply re-uploads the image rather than linking the one on Discord's CDN:
+those URLs carry an expiry signature and would leave a broken embed behind
+within a day. The bytes are already in hand by then, so it costs one upload and
+the message stands on its own afterwards. HEIC is the one accepted format
+browsers won't render — it still uploads, it just shows as a plain attachment.
+
+**This is the one command that ignores `RESPONSE_LANGUAGE`.** Rendering an
+English sign in Vietnamese would be translation, not transcription, so the
+result keeps the image's own language; only the bot's text around it stays
+Vietnamese. `temperature` is 0 — this is the only task here with a single
+correct answer.
+
+It's a language model reading an image, not a dedicated OCR engine, so it will
+occasionally tidy up what it sees. The system instruction pushes hard against
+that: transcribe verbatim, keep line breaks, mark genuinely illegible text
+rather than guessing at it, and treat any text in the image as data — an image
+that says "ignore previous instructions" gets transcribed, not obeyed. An image
+with no text in it comes back as a fixed sentinel rather than free prose, since
+"there is no text here" is otherwise indistinguishable from a photo of that
+sentence.
+
+Attachments are vetted before the command defers, so the wrong file type earns a
+private one-liner instead of replacing a "thinking…" placeholder. Images are
+capped at 8 MB: inline data shares a request-wide ceiling of roughly 20 MB and
+base64 inflates the bytes by a third on the way up. The host is checked against
+Discord's own CDN — not the SSRF guard `/epub` needs, since the URL arrives in a
+signature-verified payload, but it keeps the trust boundary visible.
+
+Unlike `/epub`, this one is fine on Vercel: one download plus one model call
+finishes well inside `maxDuration`.
+
+**Worth deciding deliberately.** Images go to Gemini under the same free-tier
+terms as the text does — see [Notes](#notes). A command that reads pictures gets
+fed screenshots of private chats, ID cards and bank statements without anyone
+thinking about it, which is a larger exposure than `/tldr` reading a public
+channel.
 
 ### `/choose` — pick one at random
 
@@ -268,6 +321,10 @@ numbers tell you which command to rein in. The levers, roughly in order:
        └ build.ts      XHTML + OPF + NCX + cover, zipped as EPUB 3
        └ reply.ts      upload the book as an attachment
 
+/ocr   ─ attachment.ts vet the upload, download it from Discord's CDN
+       └ ocr.ts        Gemini, image part inline, transcribe-don't-translate
+       └ reply.ts      post the transcription, split if it's long
+
 /choose ─ choose.ts    split on |, draw with crypto.randomInt, answer in place
 ```
 
@@ -282,7 +339,15 @@ response that still runs out is reported rather than silently truncated.
 
 **Prompt injection.** Channel messages are untrusted input, so the summariser is
 told to treat every transcript line as data to summarise, never as instructions.
-The transcript is also fenced in `<transcript>` tags.
+The transcript is also fenced in `<transcript>` tags. Text inside an image is
+untrusted the same way, so `/ocr` is told to transcribe an instruction rather
+than follow it.
+
+**Mentions.** Every reply is built from something a user supplied — channel
+messages, model output, the text inside an uploaded image — so all four send
+paths disarm mentions. Without that, an `@everyone` arriving by any of those
+routes would ping the server with the *bot's* permissions rather than the
+author's.
 
 **Limits handled.** Individual messages are clipped at 1500 characters and the
 whole transcript at 120k, dropping oldest-first with a marker so a single wall of
@@ -468,12 +533,12 @@ when a 429 appears but AI Studio shows no usage: that combination means a quota
 of _zero_ rather than a spent one, and the two are indistinguishable from the
 error alone.
 
-`npm run smoke` runs both offline suites, 87 checks in all, against fakes — no
+`npm run smoke` runs both offline suites, 117 checks in all, against fakes — no
 Discord connection or API key needed. `scripts/smoke.ts` covers reply chunking,
 transcript building, history pagination (including the >100-message pagination
-path) and the `/choose` draw; `scripts/smoke-http.ts` covers the serverless
-entrypoint — Ed25519 signature verification against a real keypair, and command
-routing.
+path), `/ocr` attachment vetting and the `/choose` draw; `scripts/smoke-http.ts`
+covers the serverless entrypoint — Ed25519 signature verification against a real
+keypair, and command routing.
 Either can be run on its own with `npx tsx scripts/<name>.ts`.
 
 ## Notes
