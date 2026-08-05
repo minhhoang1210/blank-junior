@@ -82,10 +82,10 @@ export const strings = {
 
   choose: {
     command: "Chọn ngẫu nhiên giúp bạn một trong nhiều phương án",
-    option: "Các phương án, ngăn cách bằng dấu | — ví dụ: A | B | C",
+    option: "Các phương án, ngăn cách bằng dấu | — ví dụ: a | b | c",
     tooFew:
       "Hãy đưa ít nhất 2 phương án, ngăn cách bằng dấu `|`. " +
-      "Ví dụ: `A | B | C`",
+      "Ví dụ: `a | b | c`",
     tooMany: (max: number) =>
       `Nhiều quá — mình chỉ chọn được trong tối đa ${max} phương án.`,
     result: (choice: string) => `🎲 Mình chọn: **${choice}**`,

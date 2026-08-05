@@ -24,7 +24,7 @@ changing that means editing the strings.
 ```
 
 ```
-/choose options:bún bò | phở | cơm tấm
+/choose options:a | b | c
 ```
 
 ## Commands

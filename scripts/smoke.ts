@@ -124,11 +124,11 @@ checkThat(
 // --- /choose ----------------------------------------------------------------
 console.log("\n--- /choose");
 
-check("splits on the separator", parseChoices("phở|bún bò|cơm tấm"), ["phở", "bún bò", "cơm tấm"]);
-check("trims spacing around each option", parseChoices(" phở | bún bò "), ["phở", "bún bò"]);
-check("drops empty entries", parseChoices("phở||bún bò|"), ["phở", "bún bò"]);
+check("splits on the separator", parseChoices("a|b|c"), ["a", "b", "c"]);
+check("trims spacing around each option", parseChoices(" a | b "), ["a", "b"]);
+check("drops empty entries", parseChoices("a||b|"), ["a", "b"]);
 check("keeps duplicates, which are how an option is weighted", parseChoices("a|a|b").length, 3);
-check("a single option is not yet a choice", parseChoices("phở").length, 1);
+check("a single option is not yet a choice", parseChoices("a").length, 1);
 check("separators alone yield nothing", parseChoices("|||"), []);
 check("keeps diacritics intact", parseChoices("Chương|Phiên ngoại"), ["Chương", "Phiên ngoại"]);
 
@@ -142,10 +142,10 @@ check("every option can be drawn", [...new Set(draws)].sort(), [0, 1, 2]);
 const tally = [0, 1, 2].map((index) => draws.filter((draw) => draw === index).length);
 checkThat("the draw is not visibly skewed", tally.every((count) => count > 500));
 
-const picked = formatChoice(["phở", "bún bò", "cơm tấm"], 1);
-check("announces the option at the drawn index", picked.text, "🎲 Mình chọn: **bún bò**");
-check("lists every candidate", picked.embeds[0]?.fields?.[0]?.value, "• phở\n• **bún bò**\n• cơm tấm");
-check("footer counts the candidates", picked.embeds[0]?.footer?.text, "3 phương án · rút ngẫu nhiên");
+const picked = formatChoice(["a", "b", "c"], 1);
+check("announces the option at the drawn index", picked.text, "🎲 Mình chọn: **b**");
+check("lists every candidate", picked.embeds[0]?.fields?.[0]?.value, "• a\n• **b**\n• c");
+check("footer counts the candidates", picked.embeds[0]?.footer?.text, "3 phương án · chọn ngẫu nhiên");
 
 const longOption = "x".repeat(200);
 const clipped = formatChoice([longOption, "b"], 0);
@@ -161,10 +161,10 @@ checkThat(
   (many.embeds[0]?.fields?.[0]?.value.length ?? 0) <= 1024,
 );
 
-const drawn = chooseCommand(["phở", "bún bò"]);
+const drawn = chooseCommand(["a", "b"]);
 checkThat(
   "the reply always names one of the options",
-  drawn.text === "🎲 Mình chọn: **phở**" || drawn.text === "🎲 Mình chọn: **bún bò**",
+  drawn.text === "🎲 Mình chọn: **a**" || drawn.text === "🎲 Mình chọn: **b**",
 );
 checkThat("two is enough to choose between", MIN_CHOICES === 2);
 

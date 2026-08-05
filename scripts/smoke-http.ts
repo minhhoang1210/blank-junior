@@ -122,12 +122,15 @@ checkThat("/epub schedules background work", typeof epub.background === "functio
 const choose = await post({
   type: 2,
   token: "tok",
-  data: { name: "choose", options: [{ name: "options", value: "phở|bún bò|cơm tấm" }] },
+  data: { name: "choose", options: [{ name: "options", value: "a|b|c" }] },
 });
 const chooseData = (choose.json as { type: number; data: Record<string, unknown> }).data;
 check("/choose answers immediately", (choose.json as { type: number }).type, 4);
 checkThat("/choose schedules nothing", choose.background === undefined);
-checkThat("/choose names one of the options", /phở|bún bò|cơm tấm/.test(String(chooseData.content)));
+checkThat(
+  "/choose names one of the options",
+  ["a", "b", "c"].some((option) => String(chooseData.content).endsWith(`**${option}**`)),
+);
 checkThat("/choose is public, not ephemeral", chooseData.flags === undefined);
 check("/choose disarms mentions", chooseData.allowed_mentions, { parse: [] });
 checkThat("/choose carries the candidate embed", Array.isArray(chooseData.embeds));
@@ -135,7 +138,7 @@ checkThat("/choose carries the candidate embed", Array.isArray(chooseData.embeds
 const chooseOne = await post({
   type: 2,
   token: "tok",
-  data: { name: "choose", options: [{ name: "options", value: "phở" }] },
+  data: { name: "choose", options: [{ name: "options", value: "a" }] },
 });
 check("/choose with one option is refused", (chooseOne.json as { type: number }).type, 4);
 checkThat(
