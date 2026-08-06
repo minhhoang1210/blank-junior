@@ -1,7 +1,6 @@
-import { config, SERVERLESS_EPUB_BUDGET_MS } from "../config.js";
+import { config } from "../config.js";
 import { askJob } from "../core/ask.js";
 import { describeError } from "../core/deliver.js";
-import { epubJob } from "../core/epub.js";
 import { ocrJob } from "../core/ocr.js";
 import { runCommand } from "../core/run.js";
 import { tldrJob } from "../core/tldr.js";
@@ -66,19 +65,7 @@ export function runAsk(token: string, question: string): Promise<void> {
   return runCommand(webhookTransport(token), askJob(question));
 }
 
-/**
- * The budget here is a fraction of the gateway's: Vercel kills the invocation at
- * `maxDuration` regardless of progress, so the scrape stops with time to spare
- * and sends the chapters it managed to read rather than nothing at all.
- */
-export function runEpub(token: string, url: string): Promise<void> {
-  return runCommand(webhookTransport(token), epubJob(url, SERVERLESS_EPUB_BUDGET_MS));
-}
-
-/**
- * One CDN download plus one model call fits inside `maxDuration` comfortably,
- * so unlike `/epub` this command needs no reduced budget on the serverless path.
- */
+/** One CDN download plus one model call fits inside `maxDuration` comfortably. */
 export function runOcr(token: string, attachment: AttachmentRef): Promise<void> {
   return runCommand(webhookTransport(token), ocrJob(attachment));
 }

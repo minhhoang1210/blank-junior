@@ -110,14 +110,6 @@ const askEmpty = await post({
 check("/ask with a blank question replies immediately", (askEmpty.json as { type: number }).type, 4);
 checkThat("/ask with a blank question schedules nothing", askEmpty.background === undefined);
 
-const epub = await post({
-  type: 2,
-  token: "tok",
-  data: { name: "epub", options: [{ name: "url", value: "https://ten-mien.wordpress.com/" }] },
-});
-check("/epub defers", epub.json, { type: 5 });
-checkThat("/epub schedules background work", typeof epub.background === "function");
-
 // --- /ocr -------------------------------------------------------------------
 console.log("\n--- /ocr");
 

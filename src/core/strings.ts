@@ -44,42 +44,6 @@ export const strings = {
     plain: "Gemini",
   },
 
-  epub: {
-    command: "Tải một truyện trên WordPress về dưới dạng EPUB",
-    option:
-      "Liên kết tới trang mục lục của truyện (hoặc tới một truyện ngắn một trang)",
-    alreadyRunning: "Bạn đang có một truyện đang tải. Đợi nó xong đã nhé.",
-    invalidUrl: "Đó không phải là một liên kết http/https hợp lệ.",
-
-    readingIndex: "📖 Đang đọc trang mục lục…",
-    downloading: (done: number, total: number) =>
-      `📖 Đang tải chương ${done}/${total}…`,
-    packing: "📦 Đang đóng gói EPUB…",
-    retryingWithoutImages:
-      "📦 Tệp quá lớn — đang đóng gói lại, bỏ ảnh minh hoạ…",
-
-    ready: (title: string) => `📖 **${title}**`,
-    /** Appended when the download did not cover the whole story. */
-    truncated: (fetched: number, discovered: number) =>
-      `\n⚠️ Mới tải được ${fetched}/${discovered} chương (hết thời gian hoặc chạm giới hạn).`,
-    someFailed: (failed: number) =>
-      `\n⚠️ ${failed} chương không tải được và đã bị bỏ qua.`,
-
-    chapters: "Chương",
-    words: "Số từ",
-    size: "Dung lượng",
-    source: (host: string) => `Nguồn: ${host}`,
-
-    tooLarge: (size: string, limit: string) =>
-      `Tệp EPUB nặng ${size}, vượt quá giới hạn ${limit} của Discord. ` +
-      "Hãy tải truyện này bằng công cụ trên máy, hoặc nâng `EPUB_MAX_UPLOAD_MB` " +
-      "nếu máy chủ Discord của bạn cho phép tệp lớn hơn.",
-    /** The serverless deployment cannot outlive its function timeout. */
-    serverlessLimited:
-      "Bản chạy trên Vercel chỉ có 60 giây cho mỗi lệnh, nên `/epub` ở đây chỉ tải được " +
-      "truyện rất ngắn. Truyện dài cần bản bot chạy thường trực (gateway).",
-  },
-
   ocr: {
     command: "Đọc chữ trong một tấm ảnh",
     option: "Ảnh cần đọc chữ (PNG, JPEG, WebP, HEIC)",

@@ -18,7 +18,7 @@ export interface Embed {
   image?: { url: string };
 }
 
-/** A file sent alongside a reply: the EPUB /epub builds, the image /ocr read. */
+/** A file sent alongside a reply — currently only the image `/ocr` read. */
 export interface Attachment {
   filename: string;
   data: Uint8Array;

@@ -56,24 +56,6 @@ export const config = {
   defaultTldrMessages: int("DEFAULT_TLDR_MESSAGES", 100),
   /** Per-request timeout against the Gemini API, in ms. */
   geminiTimeoutMs: int("GEMINI_TIMEOUT_MS", 120_000),
-
-  /** Hard ceiling on how many chapters /epub downloads from one story. */
-  epubMaxChapters: int("EPUB_MAX_CHAPTERS", 400),
-  /** Parallel chapter fetches. Raising this leans harder on the source site. */
-  epubConcurrency: int("EPUB_CONCURRENCY", 4),
-  /**
-   * How long the gateway bot may spend on one book, in ms.
-   *
-   * Bounded by the interaction token, which Discord invalidates 15 minutes
-   * after the command was used — past that there is nothing left to reply to.
-   */
-  epubTimeBudgetMs: Math.min(int("EPUB_TIME_BUDGET_MS", 780_000), 840_000),
-  /**
-   * Attachment ceiling in MB. Discord's own limit depends on the server's boost
-   * tier (10 MB unboosted, 50 at tier 2, 100 at tier 3), so this defaults just
-   * under the unboosted one and can be raised for a boosted server.
-   */
-  epubMaxUploadMb: int("EPUB_MAX_UPLOAD_MB", 9),
 } as const;
 
 /** Discord's hard limits, referenced in several places. */
@@ -83,12 +65,3 @@ export const DISCORD_FETCH_BATCH = 100;
 /** The /tldr bounds the user asked for. */
 export const MIN_TLDR_MESSAGES = 1;
 export const MAX_TLDR_MESSAGES = 200;
-
-/**
- * Time budget for /epub on the serverless path.
- *
- * Vercel caps `api/interactions.ts` at 60s (see vercel.json), and the function
- * is killed at that point whether or not the book is finished — so the scrape
- * stops early enough to still upload what it has.
- */
-export const SERVERLESS_EPUB_BUDGET_MS = 40_000;

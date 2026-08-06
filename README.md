@@ -1,10 +1,9 @@
 # Blank Junior
 
-A TypeScript Discord bot with five slash commands. Three are powered by the free
-tier of the Google Gemini API; the other two need no API key at all — one
-scrapes a WordPress story into an EPUB, the other just picks between things.
-**It replies in Vietnamese** — both the model's answers and the bot's own
-messages.
+A TypeScript Discord bot with four slash commands. Three are powered by the free
+tier of the Google Gemini API; the fourth just picks between things and needs no
+API key at all. **It replies in Vietnamese** — both the model's answers and the
+bot's own messages.
 
 The model's output language is `RESPONSE_LANGUAGE` in `.env` (default
 `Vietnamese`), so switching it needs no code change. The bot's own text — command
@@ -17,10 +16,6 @@ changing that means editing the strings.
 
 ```
 /ask question:is tomorrow gonna be sunny?
-```
-
-```
-/epub url:https://ten-mien.wordpress.com/ten-truyen/
 ```
 
 ```
@@ -66,57 +61,6 @@ sources instead of guessing at current facts. Run `npm run probe` to see whether
 your key has grounding quota, and set `ENABLE_SEARCH_GROUNDING=false` to skip the
 wasted first attempt if it doesn't.
 
-### `/epub` — download a WordPress story as an EPUB
-
-| Option | Type   | Required | Description                                             |
-| ------ | ------ | -------- | ------------------------------------------------------- |
-| `url`  | string | yes      | The story's table-of-contents page, or a one-page story |
-
-Reads the index page, follows every chapter link on it, and uploads the result
-as an EPUB attachment. No Gemini involved — this command costs no quota.
-
-A link counts as a chapter when its URL or anchor text contains `chương`,
-`chap`, `chapter`, `phiên ngoại`, `ngoại truyện` or `vĩ thanh`, compared with
-diacritics stripped so `Chương 12` and `chuong-12` are the same thing. Links to
-other hosts are ignored. A page with no chapter links at all is not an error: it
-becomes a one-chapter book, which is what a one-shot posted as a single
-WordPress post should be.
-
-**Chapters keep the order the links appear in on the page**, top to bottom. The
-book is not re-sorted by the number in the link, because side stories restart
-their own numbering: on a real index of 41 chapters plus 5 extras, sorting
-numerically pairs `PN 1` with `Chương 01`, `PN 2` with `Chương 02`, and threads
-the extras through the middle of the story. The page already lists chapters in
-reading order.
-
-Each chapter page is reduced to its `<article>` and stripped of the usual
-WordPress furniture — sharing widgets, related posts, comments, navigation,
-scripts — then sanitised down to an attribute allowlist. Illustrations are
-downloaded and embedded so the book reads offline, `data-orig-file` lazy-loading
-attributes included. The book gets a generated cover, a synopsis page built from
-the index page, and both an EPUB 3 nav document and an EPUB 2 NCX so old readers
-still get a table of contents.
-
-Practical limits, all in [Configuration](#configuration): at most
-`EPUB_MAX_CHAPTERS` chapters, `EPUB_TIME_BUDGET_MS` of wall clock, and
-`EPUB_MAX_UPLOAD_MB` of attachment. Hitting the first two truncates the book and
-says so in the reply; a book that is still too big after being repacked without
-images is refused rather than silently cut short. Fetches run four at a time
-with a 250 ms pause between them — enough to build a long book in a few minutes
-without hammering someone's blog.
-
-To try a source site without going through Discord:
-
-```bash
-npm run epub -- https://ten-mien.wordpress.com/ten-truyen/ --max 20
-```
-
-**On the serverless deployment this command is close to useless.** Vercel kills
-the function after 60 seconds (`maxDuration` in `vercel.json`), so `/epub`
-budgets 40 of them and uploads whatever it managed to read. That is a handful of
-chapters. Long stories need the gateway shape — see
-[Running it 24/7](#running-it-247).
-
 ### `/ocr` — read the text in an image
 
 | Option  | Type       | Required | Description                            |
@@ -154,11 +98,12 @@ Attachments are vetted before the command defers, so the wrong file type earns a
 private one-liner instead of replacing a "thinking…" placeholder. Images are
 capped at 8 MB: inline data shares a request-wide ceiling of roughly 20 MB and
 base64 inflates the bytes by a third on the way up. The host is checked against
-Discord's own CDN — not the SSRF guard `/epub` needs, since the URL arrives in a
-signature-verified payload, but it keeps the trust boundary visible.
+Discord's own CDN: the URL arrives inside a signature-verified payload rather
+than from anything a user typed, but the check keeps that trust boundary visible
+instead of implied.
 
-Unlike `/epub`, this one is fine on Vercel: one download plus one model call
-finishes well inside `maxDuration`.
+It is fine on Vercel — one download plus one model call finishes well inside
+`maxDuration`.
 
 **Worth deciding deliberately.** Images go to Gemini under the same free-tier
 terms as the text does — see [Notes](#notes). A command that reads pictures gets
@@ -252,10 +197,6 @@ npm run build && npm start
 | `ENABLE_SEARCH_GROUNDING` | `true`             | Google Search on `/ask` — has its own quota                           |
 | `DEFAULT_TLDR_MESSAGES`   | `100`              | `/tldr` message count when the option is omitted                      |
 | `GEMINI_TIMEOUT_MS`       | `120000`           | Per-request timeout against the Gemini API                            |
-| `EPUB_MAX_CHAPTERS`       | `400`              | Most chapters `/epub` will download from one story                    |
-| `EPUB_CONCURRENCY`        | `4`                | Parallel chapter fetches — raising it leans harder on the source site |
-| `EPUB_TIME_BUDGET_MS`     | `780000`           | Wall clock `/epub` may spend on one book (capped at 14 min)           |
-| `EPUB_MAX_UPLOAD_MB`      | `9`                | Attachment ceiling — raise it on a boosted server                     |
 
 ## Choosing a model
 
@@ -275,8 +216,9 @@ one of them. If the bot ever replies that a model isn't available, this is the
 fix, and the error message says so.
 
 Prefer a `flash`-class model: they're the fastest and have the most generous
-free-tier limits, which suits both commands here. A `pro`-class model writes
-better summaries of long or messy transcripts but burns free quota much faster.
+free-tier limits, which suits all three model-backed commands here. A
+`pro`-class model writes better summaries of long or messy transcripts but burns
+free quota much faster.
 
 ## Free-tier limits
 
@@ -316,11 +258,6 @@ numbers tell you which command to rein in. The levers, roughly in order:
 /ask   ─ ask.ts        Gemini with the googleSearch tool, one server-side call
        └ reply.ts      post the answer plus a sources embed
 
-/epub  ─ scrape.ts     read the index page, fetch chapters 4-at-a-time
-       └ parser.ts     strip WordPress furniture, sanitise, resolve URLs
-       └ build.ts      XHTML + OPF + NCX + cover, zipped as EPUB 3
-       └ reply.ts      upload the book as an attachment
-
 /ocr   ─ attachment.ts vet the upload, download it from Discord's CDN
        └ ocr.ts        Gemini, image part inline, transcribe-don't-translate
        └ reply.ts      post the transcription, split if it's long
@@ -329,7 +266,7 @@ numbers tell you which command to rein in. The levers, roughly in order:
 ```
 
 **Blocked responses.** Gemini's safety filters return a normal HTTP 200 with an
-empty candidate rather than an error, so both commands check `promptFeedback`
+empty candidate rather than an error, so every model call checks `promptFeedback`
 and the candidate's `finishReason` _before_ reading the text. A filtered prompt
 or response surfaces as a clear message instead of a blank reply.
 
@@ -357,15 +294,9 @@ text can't crowd out the conversation. Replies longer than Discord's
 **Concurrency.** One job per user per command, so a single person can't queue up
 model calls.
 
-**Untrusted URLs.** `/epub` fetches whatever anyone in the server types, from a
-host that can usually see a private subnet and a cloud metadata endpoint. Every
-hop of every request — including each redirect, followed by hand for exactly
-this reason — is checked against loopback, private, link-local and CGNAT ranges,
-in IPv4 and IPv6 alike; hostnames are resolved first, so a public domain
-pointing at `127.0.0.1` is refused too. Pages are decoded using the charset the
-server or the document declares rather than assuming UTF-8, and content
-documents are serialised as XHTML by hand so a malformed page cannot produce a
-book that fails to open.
+**Outbound fetches.** The bot only ever downloads from Discord's own CDN, for
+`/ocr`, and the host is checked before the request goes out. Nothing here
+fetches a URL a user typed.
 
 ## Running it 24/7
 
@@ -379,8 +310,8 @@ prompts and Gemini layer:
 
 Discord pushes slash commands to an HTTPS endpoint in the first shape, and the
 bot holds an outbound WebSocket open in the second. Only the gateway shape can
-ever react to non-interaction events (messages, reactions, joins); for these two
-commands, both are equivalent.
+ever react to non-interaction events (messages, reactions, joins); for these
+four commands, both are equivalent.
 
 Whatever you pick, register the commands once after the first deploy:
 
@@ -435,10 +366,10 @@ no-op and points `outputDirectory` at [public/](public), which holds a single
 placeholder page. Nothing about the bot is served from there.
 
 **How it copes with the 3-second rule.** Discord drops an interaction that isn't
-acknowledged within 3 seconds, and neither command finishes that fast. Both
-reply immediately with a deferred "thinking…" response, then finish the real
-work under Vercel's `waitUntil` and edit the placeholder via the follow-up
-webhook.
+acknowledged within 3 seconds, and no command that calls Gemini finishes that
+fast. Those reply immediately with a deferred "thinking…" response, then finish
+the real work under Vercel's `waitUntil` and edit the placeholder via the
+follow-up webhook. `/choose` needs none of that — it answers outright.
 
 **The one limit to watch.** That background work still has to finish inside the
 function's `maxDuration` — set to 60s in [vercel.json](vercel.json). A
@@ -446,10 +377,6 @@ function's `maxDuration` — set to 60s in [vercel.json](vercel.json). A
 slow the invocation can be cut off, leaving "thinking…" that never updates. If
 you see that, lower `DEFAULT_TLDR_MESSAGES` or raise `maxDuration` if your plan
 allows it.
-
-`/epub` is the command that limit really hurts: a full story is minutes of
-fetching, so here it stops after 40 seconds and sends whatever it has. If you
-want that command for real, use one of the shapes below.
 
 ### Option B — Linux VPS with systemd (most control, cheapest reliable)
 
@@ -533,7 +460,7 @@ when a 429 appears but AI Studio shows no usage: that combination means a quota
 of _zero_ rather than a spent one, and the two are indistinguishable from the
 error alone.
 
-`npm run smoke` runs both offline suites, 117 checks in all, against fakes — no
+`npm run smoke` runs both offline suites, 115 checks in all, against fakes — no
 Discord connection or API key needed. `scripts/smoke.ts` covers reply chunking,
 transcript building, history pagination (including the >100-message pagination
 path), `/ocr` attachment vetting and the `/choose` draw; `scripts/smoke-http.ts`

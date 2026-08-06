@@ -4,10 +4,10 @@ import { AttachmentError } from "./attachment-error.js";
 /**
  * Hosts Discord serves attachments from.
  *
- * The URL arrives inside a signature-verified interaction payload, so this is
- * not the SSRF guard `/epub` needs — that command fetches whatever hostname a
- * user typed, this one only ever follows a link Discord itself minted. Checking
- * the host anyway keeps the trust boundary visible instead of implied.
+ * The URL arrives inside a signature-verified interaction payload, so the bot
+ * only ever follows a link Discord itself minted rather than a hostname someone
+ * typed. Checking the host anyway keeps that trust boundary visible instead of
+ * implied.
  */
 const CDN_HOSTS: ReadonlySet<string> = new Set(["cdn.discordapp.com", "media.discordapp.net"]);
 

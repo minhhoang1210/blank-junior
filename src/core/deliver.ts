@@ -1,6 +1,5 @@
 import { AttachmentError } from "../discord/attachment-error.js";
 import { HistoryError } from "../discord/history-error.js";
-import { EpubError } from "../epub/errors.js";
 import { describeGeminiError } from "../gemini/client.js";
 import { logger } from "../util/logger.js";
 import { chunkForDiscord } from "../util/text.js";
@@ -35,13 +34,7 @@ export async function deliverError(transport: ReplyTransport, error: unknown): P
 
 /** Turns any thrown value into something worth showing a user. */
 export function toUserMessage(error: unknown): string {
-  if (
-    error instanceof HistoryError ||
-    error instanceof EpubError ||
-    error instanceof AttachmentError
-  ) {
-    return error.message;
-  }
+  if (error instanceof HistoryError || error instanceof AttachmentError) return error.message;
   return describeGeminiError(error);
 }
 
