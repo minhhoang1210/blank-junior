@@ -1,5 +1,5 @@
 import { config } from "../config.js";
-import { askJob } from "../core/ask.js";
+import { chatJob } from "../core/chat.js";
 import { describeError } from "../core/deliver.js";
 import { ocrJob } from "../core/ocr.js";
 import { runCommand } from "../core/run.js";
@@ -61,8 +61,8 @@ export function runTldr(
   );
 }
 
-export function runAsk(token: string, question: string): Promise<void> {
-  return runCommand(webhookTransport(token), askJob(question));
+export function runChat(token: string, message: string): Promise<void> {
+  return runCommand(webhookTransport(token), chatJob(message));
 }
 
 /** One CDN download plus one model call fits inside `maxDuration` comfortably. */

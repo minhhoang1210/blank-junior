@@ -94,21 +94,40 @@ const tldrDefault = await post({ type: 2, token: "tok", channel_id: "555", data:
 check("/tldr without options still defers", tldrDefault.json, { type: 5 });
 checkThat("/tldr without options schedules work", typeof tldrDefault.background === "function");
 
-const ask = await post({
+const chat = await post({
   type: 2,
   token: "tok",
-  data: { name: "ask", options: [{ name: "question", value: "trời mai có nắng không?" }] },
+  data: { name: "chat", options: [{ name: "message", value: "trời mai có nắng không?" }] },
 });
-check("/ask defers", ask.json, { type: 5 });
-checkThat("/ask schedules background work", typeof ask.background === "function");
+check("/chat defers", chat.json, { type: 5 });
+checkThat("/chat schedules background work", typeof chat.background === "function");
 
-const askEmpty = await post({
+// The command takes any request, not only questions.
+const chatTask = await post({
   type: 2,
   token: "tok",
-  data: { name: "ask", options: [{ name: "question", value: "   " }] },
+  data: { name: "chat", options: [{ name: "message", value: "viết lại đoạn này cho gọn hơn" }] },
 });
-check("/ask with a blank question replies immediately", (askEmpty.json as { type: number }).type, 4);
-checkThat("/ask with a blank question schedules nothing", askEmpty.background === undefined);
+check("/chat defers for a non-question request too", chatTask.json, { type: 5 });
+checkThat("/chat schedules work for a request", typeof chatTask.background === "function");
+
+const chatEmpty = await post({
+  type: 2,
+  token: "tok",
+  data: { name: "chat", options: [{ name: "message", value: "   " }] },
+});
+check("/chat with a blank message replies immediately", (chatEmpty.json as { type: number }).type, 4);
+checkThat("/chat with a blank message schedules nothing", chatEmpty.background === undefined);
+
+// The old name must not keep working: a stale registration should surface as
+// "unsupported" rather than silently routing somewhere.
+const oldAsk = await post({
+  type: 2,
+  token: "tok",
+  data: { name: "ask", options: [{ name: "question", value: "vẫn còn chạy à?" }] },
+});
+check("the retired /ask name is unknown", (oldAsk.json as { type: number }).type, 4);
+checkThat("the retired /ask name schedules nothing", oldAsk.background === undefined);
 
 // --- /ocr -------------------------------------------------------------------
 console.log("\n--- /ocr");

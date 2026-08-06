@@ -75,7 +75,7 @@ if (plain.ok && grounded.ok) {
 } else if (plain.ok && !grounded.ok) {
   console.log(
     `Generation works; Google Search grounding does not on ${model}.\n` +
-      "Set ENABLE_SEARCH_GROUNDING=false in .env — /ask will then answer from model\n" +
+      "Set ENABLE_SEARCH_GROUNDING=false in .env — /chat will then reply from model\n" +
       "knowledge only, and /tldr is unaffected. To keep grounding, switch to a model\n" +
       "whose free tier includes it (npm run models) or enable billing.",
   );

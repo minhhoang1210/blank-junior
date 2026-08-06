@@ -4,7 +4,7 @@ import { strings } from "../core/strings.js";
 import type { Embed } from "../core/types.js";
 import { type AttachmentRef, describeImageProblem } from "../discord/attachment.js";
 import { logger } from "../util/logger.js";
-import { runAsk, runOcr, runTldr } from "./commands.js";
+import { runChat, runOcr, runTldr } from "./commands.js";
 import { verifyDiscordRequest } from "./verify.js";
 
 /** Discord interaction types we handle. */
@@ -132,11 +132,11 @@ function routeCommand(interaction: Interaction): InteractionResult {
     };
   }
 
-  if (name === "ask") {
-    const question = String(optionValue(interaction, "question") ?? "").trim();
-    if (!question) return reply(strings.ask.blankQuestion);
+  if (name === "chat") {
+    const message = String(optionValue(interaction, "message") ?? "").trim();
+    if (!message) return reply(strings.chat.blankMessage);
 
-    return { ...deferred, background: () => runAsk(token, question) };
+    return { ...deferred, background: () => runChat(token, message) };
   }
 
   if (name === "ocr") {

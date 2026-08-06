@@ -40,9 +40,9 @@ export const config = {
   geminiModel: process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash",
 
   /**
-   * Google Search grounding on /ask. It has its own free-tier quota separate
+   * Google Search grounding on /chat. It has its own free-tier quota separate
    * from the model's, so turning it off is a lever when that quota is the
-   * bottleneck — at the cost of answers to time-sensitive questions.
+   * bottleneck — at the cost of replies to time-sensitive requests.
    */
   enableSearchGrounding: process.env.ENABLE_SEARCH_GROUNDING?.trim().toLowerCase() !== "false",
 

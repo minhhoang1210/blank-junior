@@ -33,11 +33,11 @@ export const strings = {
         : `${read} tin nhắn · tóm tắt bởi Gemini`,
   },
 
-  ask: {
-    command: "Hỏi Gemini một câu hỏi",
-    option: "Bạn muốn biết điều gì?",
-    blankQuestion: "Bạn hãy đặt một câu hỏi cụ thể nhé.",
-    alreadyRunning: "Bạn đang có một câu hỏi đang xử lý. Đợi nó xong đã nhé.",
+  chat: {
+    command: "Nhắn cho Gemini: hỏi, nhờ viết, dịch, giải thích…",
+    option: "Bạn muốn hỏi hoặc nhờ điều gì?",
+    blankMessage: "Bạn hãy nhắn một nội dung cụ thể nhé.",
+    alreadyRunning: "Bạn đang có một tin nhắn đang xử lý. Đợi nó xong đã nhé.",
     sources: "Nguồn",
     grounded: "Gemini · có tra cứu Google Search",
     ungrounded: "Gemini · trả lời không tra cứu web",

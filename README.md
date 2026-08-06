@@ -15,7 +15,11 @@ changing that means editing the strings.
 ```
 
 ```
-/ask question:is tomorrow gonna be sunny?
+/chat message:is tomorrow gonna be sunny?
+```
+
+```
+/chat message:viết lại đoạn này cho gọn hơn: …
 ```
 
 ```
@@ -42,24 +46,32 @@ Discord caps a history fetch at 100 messages, so anything above that is
 paginated automatically. The bot's own messages are skipped, so previous
 summaries never feed into new ones.
 
-### `/ask` — ask a question
+### `/chat` — send Gemini anything
 
-| Option     | Type   | Required | Description           |
-| ---------- | ------ | -------- | --------------------- |
-| `question` | string | yes      | What you want to know |
+| Option    | Type   | Required | Description                        |
+| --------- | ------ | -------- | ---------------------------------- |
+| `message` | string | yes      | What you want to ask or ask for    |
 
-Gemini answers with **Google Search grounding enabled**, so time-sensitive
-questions like the example above get a real answer instead of "I don't have
-real-time access". When it searches, the sources it grounded on are listed under
-the reply.
+Takes any request, not just questions: ask something, have a message drafted or
+rewritten, get an error explained, get a passage translated, think a decision
+through. The system prompt is written around *do what was asked* — produce the
+thing rather than describe how you would produce it — so a request to write
+something comes back as the writing itself.
+
+Each call stands alone. There's no conversation history, so a follow-up has to
+carry its own context.
+
+Gemini replies with **Google Search grounding enabled**, so time-sensitive
+questions get a real answer instead of "I don't have real-time access". When it
+searches, the sources it grounded on are listed under the reply.
 
 Grounding has its own free-tier quota, separate from the model's, and plenty of
-free keys have none for it. When a grounded call is refused, `/ask` retries once
-without search rather than failing: you still get an answer, the footer says the
-answer wasn't searched, and the model is told to admit it can't check live
-sources instead of guessing at current facts. Run `npm run probe` to see whether
-your key has grounding quota, and set `ENABLE_SEARCH_GROUNDING=false` to skip the
-wasted first attempt if it doesn't.
+free keys have none for it. When a grounded call is refused, `/chat` retries once
+without search rather than failing: you still get a reply, the footer says it
+wasn't searched, and the model is told to admit it can't check live sources
+instead of guessing at current facts. Run `npm run probe` to see whether your key
+has grounding quota, and set `ENABLE_SEARCH_GROUNDING=false` to skip the wasted
+first attempt if it doesn't.
 
 ### `/ocr` — read the text in an image
 
@@ -194,7 +206,7 @@ npm run build && npm start
 | `GEMINI_MODEL`            | `gemini-2.5-flash` | Model to use — see below                                              |
 | `DISCORD_GUILD_ID`        | —                  | Register commands to one server for instant updates                   |
 | `RESPONSE_LANGUAGE`       | `Vietnamese`       | Language the model answers in                                         |
-| `ENABLE_SEARCH_GROUNDING` | `true`             | Google Search on `/ask` — has its own quota                           |
+| `ENABLE_SEARCH_GROUNDING` | `true`             | Google Search on `/chat` — has its own quota                          |
 | `DEFAULT_TLDR_MESSAGES`   | `100`              | `/tldr` message count when the option is omitted                      |
 | `GEMINI_TIMEOUT_MS`       | `120000`           | Per-request timeout against the Gemini API                            |
 
@@ -236,7 +248,7 @@ public docs no longer publish per-model numbers.
 
 ```
 INFO /tldr (200 messages) tokens — prompt=4132, thinking=890, output=412, total=5434
-INFO /ask tokens — prompt=61, thinking=204, output=298, search=1840, total=2403
+INFO /chat tokens — prompt=61, thinking=204, output=298, search=1840, total=2403
 ```
 
 Because limits are enforced on tokens per minute as well as requests, those
@@ -244,7 +256,7 @@ numbers tell you which command to rein in. The levers, roughly in order:
 
 1. Lower `DEFAULT_TLDR_MESSAGES` — `/tldr` dominates prompt tokens.
 2. Set `ENABLE_SEARCH_GROUNDING=false` — grounding has its own separate quota
-   and shows up as `search=` in the `/ask` line. Costs you answers to
+   and shows up as `search=` in the `/chat` line. Costs you answers to
    time-sensitive questions.
 3. Move to a lighter model with `npm run models`.
 
@@ -255,7 +267,7 @@ numbers tell you which command to rein in. The levers, roughly in order:
        └ summarize.ts  Gemini, system instruction + transcript
        └ reply.ts      post, splitting across messages past Discord's 2000-char cap
 
-/ask   ─ ask.ts        Gemini with the googleSearch tool, one server-side call
+/chat  ─ chat.ts       Gemini with the googleSearch tool, one server-side call
        └ reply.ts      post the answer plus a sources embed
 
 /ocr   ─ attachment.ts vet the upload, download it from Discord's CDN
@@ -460,7 +472,7 @@ when a 429 appears but AI Studio shows no usage: that combination means a quota
 of _zero_ rather than a spent one, and the two are indistinguishable from the
 error alone.
 
-`npm run smoke` runs both offline suites, 115 checks in all, against fakes — no
+`npm run smoke` runs both offline suites, 119 checks in all, against fakes — no
 Discord connection or API key needed. `scripts/smoke.ts` covers reply chunking,
 transcript building, history pagination (including the >100-message pagination
 path), `/ocr` attachment vetting and the `/choose` draw; `scripts/smoke-http.ts`
